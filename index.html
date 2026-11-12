@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#EEF1F4">
+<title>Inventário AeroRio</title>
+<link rel="icon" href="data:,">
+</head>
+<body>
+<div id="app" data-style="b">
+ <div class="ui top">
+  <div class="brand"><b>AERORIO</b></div>
+  <button class="labchip glass" id="labChip"></button>
+  <div class="seg glass" id="modes"><button data-m="nav" class="on">Navegar</button><button data-m="vist" data-need="m">Vistoria</button></div>
+  <div class="spacer"></div>
+  <div class="styles glass" id="styles"><span class="sw" data-v="a" data-n="A · Noturno"></span><span class="sw on" data-v="b" data-n="B · Claro"></span><span class="sw" data-v="c" data-n="C · Ilustrado"></span></div>
+  <div class="seg glass" id="roles"><button data-r="vis">Visitante</button><button data-r="mem" class="on">Membro</button><button data-r="admin">Admin</button></div>
+ </div>
+ <div class="ui admbar glass"><button class="pill sm" id="buyBtn">Lista de compras</button><button class="pill sm" id="editBtn">Editar posições</button><button class="pill sm" id="labelsBtn">Etiquetas</button><button class="pill sm" id="histBtn">Histórico</button></div>
+ <div class="ui edbar glass"><span>Editar posições · arraste os móveis</span><button class="pill sm" id="rotBtn">Girar 90°</button><button class="pill sm pri" id="edDone">Concluir</button></div>
+ <div class="ui home" id="home">
+  <button class="sbar glass" id="searchBtn"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><span>Buscar itens, gavetas, caixas…</span></button>
+  <button class="pill big pri" id="gBtn"><svg class="i" viewBox="0 0 24 24"><path class="f" d="M4 13h16v7H4z"/><path d="M4 13v7h16v-7"/><path d="M12 3v10M8 9l4 4 4-4"/></svg>Guardar</button>
+ </div>
+ <div class="acard glass" id="acard"></div>
+ <div id="stack"></div>
+ <div class="ui vsheet glass" id="vsheet"></div>
+ <div class="ui toast glass" id="toast"></div>
+ <div class="ui guide glass" id="guide"></div>
+ <div class="ui crumbs" id="crumbs"></div>
+ <div class="ui scrim" id="scrim"></div>
+ <div class="pal glass" id="pal"><div class="pin" id="palIn"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input class="q" id="q" autocomplete="off"></div><div class="pc" id="pres"></div></div>
+ <div class="ui pop glass" id="pop"></div>
+ <div class="ui modal glass" id="modal"></div>
+ <div class="ui oc glass" id="oc"></div>
+ <div class="ui ocx" id="ocx"></div>
+ <div class="tip glass" id="tip"></div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

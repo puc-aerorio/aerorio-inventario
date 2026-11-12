@@ -1,0 +1,23 @@
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
+import '@fontsource/barlow/700.css';
+import '@fontsource/barlow-condensed/500.css';
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700.css';
+import '@fontsource/b612-mono/400.css';
+import '@fontsource/b612-mono/700.css';
+import './styles.css';
+/* A ordem importa: cada módulo só depende dos anteriores. */
+import './app/state.js';
+import './app/icons.js';
+import './app/data.js';
+import './app/html.js';
+import './app/tween.js';
+import './app/scene.js';
+import './app/room.js';
+import './app/post.js';
+import './app/style.js';
+import './app/furniture.js';
+import './app/camera.js';
+import './app/ui.js';
