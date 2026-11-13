@@ -21,3 +21,5 @@ import './app/style.js';
 import './app/furniture.js';
 import './app/camera.js';
 import './app/ui.js';
+import './app/mobile.js';
+import './app/sync.js';

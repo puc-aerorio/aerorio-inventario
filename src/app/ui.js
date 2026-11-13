@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { $, F, S, app, halos, mob, pick, ray } from './state.js';
+import { $, F, LITE, RENDER, S, UIH, app, halos, mob, pick, ray, wake } from './state.js';
 import { IC, P } from './icons.js';
-import { BUY, CL, DAY, E, ESTADOS, ETQ, IT, ITEMS, LABS, LOG, M, NIVEIS, O, OCOL, OT, OTK, PESSOAS, SEM, SPECK, SZ, TIPOEMP, U, alertsOf, allLoc, byLab, countable, etqOf, findOrg, isAlert, locE, log, norm, orgName, partName, pathOf, stats, sugCl, touch, unitsOf, usedEtq, walk } from './data.js';
+import { BUY, CL, COMPRADOS, DAY, E, ESTADOS, ETQ, IT, ITEMS, LABS, LOG, M, NIVEIS, O, OCOL, OT, OTK, PESSOAS, RECADO, SEM, SPECK, SZ, TIPOEMP, U, alertsOf, allLoc, byLab, clean, countable, etqOf, findOrg, identOp, isAlert, locE, log, norm, orgName, partName, pathOf, resetDemo, save, stats, sugCl, touch, uid, unitsOf, usedEtq, walk } from './data.js';
 import { can, clsH, clsIconsH, cntH, heroH, isAdmin, odoH, odoSet, orgFront, orgIso, ostackH, qrSvg, relRect, tagH, toast } from './html.js';
-import { fly, runTweens, tween, wait } from './tween.js';
-import { DIR, RZ, camera, controls, fitD, labG, renderer, scene } from './scene.js';
-import { atrasDeParede, roomTick, viewMode } from './room.js';
+import { fly, runTweens, tween, tweens, wait } from './tween.js';
+import { DIR, camera, controls, fitD, labG, renderer, scene } from './scene.js';
+import { LABGLOW, atrasDeParede, fyW, inLab, roomTick, setRecado, viewMode } from './room.js';
 import { ghostPost, ghostPre, post } from './post.js';
 import { applyStyle, applyStyleTo } from './style.js';
 import { buildContents, buildOrg, byId, measure, partW, piece } from './furniture.js';
@@ -27,11 +27,11 @@ acard.addEventListener('click',e=>{const t=e.target.closest('[data-tag]');if(t)r
 /* ================= pilha de cards ================= */
 export const stackEl=$('#stack');
 export function openStack(entries){acard.classList.remove('on');S.sel=entries[0].f;ensureLab(entries[0].f);
- [...stackEl.children].forEach(c=>c.remove());S.stack=[];entries.forEach((e,i)=>pushCard(e,i<entries.length-1));home();}
-export function pushCard(e,silent){S.stack.push(e);const el=document.createElement('div');el.className='scard glass'+(silent?'':' enter');stackEl.appendChild(el);e.el=el;
+ [...stackEl.querySelectorAll('.scard')].forEach(c=>c.remove());S.stack=[];entries.forEach((e,i)=>pushCard(e,i<entries.length-1));home();}
+export function pushCard(e,silent){S.stack.push(e);UIH.sheetFor&&UIH.sheetFor(e.t);wake();const el=document.createElement('div');el.className='scard glass'+(silent?'':' enter');stackEl.appendChild(el);e.el=el;
  renderCard(e);layoutStack();if(!silent)requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('enter')));if(!silent||S.stack.length)onTop();}
-export function popTo(i){while(S.stack.length-1>i){const e=S.stack.pop();e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);}layoutStack();onTop();}
-export function closeStack(quiet){S.stack.forEach(e=>{e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);});const f=S.stack[0]&&S.stack[0].f;S.stack=[];if(f)setOpen(f,null);
+export function popTo(i){wake();while(S.stack.length-1>i){const e=S.stack.pop();e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);}layoutStack();onTop();}
+export function closeStack(quiet){wake();S.stack.forEach(e=>{e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);});const f=S.stack[0]&&S.stack[0].f;S.stack=[];if(f)setOpen(f,null);
  setHoverPart(null);deselect();home();if(!quiet)goHome();}
 export function layoutStack(){const n=S.stack.length;S.stack.forEach((e,i)=>{const depth=n-1-i;e.el.style.top=(i*50)+'px';e.el.style.zIndex=i;e.el.style.transform=depth?`scale(${1-depth*.025})`:'';e.el.classList.toggle('under',!!depth);});}
 export function onTop(){const top=S.stack[S.stack.length-1];if(!top)return;const f=top.f;
@@ -76,7 +76,7 @@ export function renderCard(e){const sc=e.el.querySelector('.sb')?.scrollTop||0;l
   b+=`<div class="grp">Itens<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button> · <button class="link" data-b="addo">+ Organizador</button></span></div>`;
   b+=p.itens.length?p.itens.map(x=>itemH(x,e)).join(''):`<div style="color:var(--ink3);font-size:.85rem;padding:6px 0">Nenhum item solto.</div>`;}
  else if(e.t==='o'){const o=e.o;b+=heroH(o);
-  b+=`<div style="display:flex;gap:8px;margin:0 0 6px" data-need="m"><button class="pill sm" data-b="moveorg">${IC.move}Mudar de lugar</button></div>`;
+  b+=`<div style="display:flex;gap:8px;margin:0 0 6px" data-need="m"><button class="pill sm" data-b="moveorg">${IC.move}Mudar de lugar</button><span class="cols8" style="margin-left:auto;align-items:center">${[OT[o.tipo].cor,...OCOL.filter(c=>c!==OT[o.tipo].cor)].slice(0,6).map(c=>`<button data-ocor="${c}" class="${c===o.cor?'on':''}" style="--c:${c}" title="Trocar a cor"></button>`).join('')}</span></div>`;
   b+=`<div class="grp">Dentro de ${orgName(o).toLowerCase()}<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button></span></div>`;
   b+=o.itens.length?o.itens.map(x=>itemH(x,e)).join(''):'<div style="color:var(--ink3);font-size:.85rem">Vazio.</div>';}
  else if(e.t==='i')b+=detailH(e);
@@ -90,7 +90,7 @@ export function itemH(e,ctx,opt={}){const it=IT(e),c=CL[it.cl].c;const al=alerts
  if(it.modo==='contavel'){q=esg?`<div class="q" style="font-size:1rem">Esgotado</div>`:`<div class="q">${odoH(e.qtd)}<small>${it.un}</small></div>`;
   ctl=`<div class="pcs" style="--c:${c}">${piecesH(e.qtd)}</div><span class="rc"><button data-act="dec" aria-label="Usar uma">−</button><button data-act="inc" aria-label="Repor uma">+</button></span>`;}
  else if(it.modo==='unidades'){q=`<div class="q">${odoH(e.units.length)}<small>${e.units.length===1?'unidade':'unidades'}</small></div>`;
-  ctl=`<div class="units">${e.units.map(u=>unitH(u)).join('')}</div>`;}
+  ctl=`<div class="units">${e.units.map(u=>unitH(u,it)).join('')}<button class="uc add" data-act="addunit" data-need="m" title="Registrar mais uma unidade">+</button></div>${vlegH(e,it)}`;}
  else{q=`<div class="q" style="font-size:1rem">${NIVEIS[e.nivel]}</div>`;
   ctl=`<span class="gauge" style="--c:${c}"><i style="height:${e.nivel/3*100}%"></i></span><div class="gsel" data-need="m">${NIVEIS.map((n,k)=>`<button data-act="lvl" data-n="${k}" class="${k===e.nivel?'on':''}">${n}</button>`).join('')}</div>
    <div class="tps">${(e.tipos||[]).map((t,k)=>`<button class="tp ${t.aus?'aus':''}" data-act="tipo" data-k="${k}" title="${t.aus?'Encontrado':'Registrar falta'}">${t.n}</button>`).join('')}<button class="tp" data-act="addtipo" data-need="m">+ tipo</button></div>`;}
@@ -98,7 +98,9 @@ export function itemH(e,ctx,opt={}){const it=IT(e),c=CL[it.cl].c;const al=alerts
  const open=S.openRow===e.id;
  return `<div class="irow ${open?'open':''} ${esg?'esg':''}" data-item="${e.id}">${clsH(it.cl,it.modo==='contavel'&&e.qtd<=it.min&&e.qtd>0?'pulse':'')}<div class="nm">${it.nome}${opt.path?`<small>${opt.path}</small>`:''}</div>${q}
   <div class="wr">${al.map(([k,t])=>`<span class="wn ${k}">${t}</span>`).join('')}</div><div class="ctl">${ctl}</div>${acts}${e._edit?editH(e):''}</div>`;}
-export const unitH=u=>{const [n,c]=ESTADOS[u.estado];return `<button class="uc ${u.emp?'emp':''}" data-act="unit" data-u="${u.n}" style="--sc:${c}" title="#${u.n} · ${n}${u.emp?' · com '+u.emp.para:''}">${u.n}</button>`;};
+export const unitH=(u,it)=>{const [n,c]=ESTADOS[u.estado];const op=it&&identOp(it,u.v);
+ return `<button class="uc ${u.emp?'emp':''} ${op?(op.c?'vcor':'vtxt'):''}" data-act="unit" data-u="${u.n}" style="--sc:${c}${op&&op.c?';--vc:'+op.c:''}" title="#${u.n}${op?' · '+op.n:''} · ${n}${u.emp?' · com '+u.emp.para:''}">${op&&!op.c?`<b>${op.n.slice(0,1).toUpperCase()}</b><i>${u.n}</i>`:u.n}</button>`;};
+export const vlegH=(e,it)=>it.ident?`<div class="vleg"><span>${it.ident.nome}</span>${it.ident.ops.map(o=>[o,e.units.filter(u=>u.v===o.n).length]).filter(x=>x[1]).map(([o,q])=>`<span>${o.c?`<i style="background:${o.c}"></i>`:''}${o.n} <b>${q}</b></span>`).join('')}</div>`:'';
 export function editH(e){const it=IT(e);const keys=SPECK[it.cl]||[];
  return `<div class="form" style="grid-column:1/4" data-edit><label>Nome<input name="nome" value="${it.nome}"></label><div class="row"><label>Classe<select name="cl">${Object.entries(CL).map(([k,v])=>`<option value="${k}" ${k===it.cl?'selected':''}>${v.n}</option>`).join('')}</select></label>
   ${it.modo==='contavel'?`<label>Unidade<input name="un" value="${it.un}"></label><label>Mínimo<input name="min" type="number" value="${it.min}"></label>`:''}</div>
@@ -106,7 +108,7 @@ export function editH(e){const it=IT(e);const keys=SPECK[it.cl]||[];
   <div class="row" style="justify-content:flex-end"><button class="pill sm" data-act="ecancel" style="flex:0">Cancelar</button><button class="pill sm pri" data-act="esave" style="flex:0">Salvar</button></div></div>`;}
 export function detailH(e){const x=e.x,it=IT(x.e);const locs=allLoc().filter(y=>y.e.ref===it.id);const hist=LOG.filter(l=>l.ref===it.id).slice(0,12);
  return `${it.desc?`<p style="margin:2px 0 10px;color:var(--ink2)">${it.desc}</p>`:''}
-  <div class="grp">Especificações</div><dl class="specs"><dt>Classe</dt><dd>${CL[it.cl].n}</dd>${it.modo==='contavel'?`<dt>Mínimo</dt><dd>${it.min} ${it.un}</dd>`:''}${Object.entries(it.spec).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+  <div class="grp">Especificações</div><dl class="specs"><dt>Classe</dt><dd>${CL[it.cl].n}</dd>${it.modo==='contavel'?`<dt>Mínimo</dt><dd>${it.min} ${it.un}</dd>`:''}${it.ident?`<dt>${it.ident.nome}</dt><dd>${it.ident.ops.map(o=>o.n).join(', ')}</dd>`:''}${Object.entries(it.spec).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
   <div class="grp">Onde está</div><div class="locs">${locs.map(y=>`<div class="lr">${IC.loc}<span>${pathOf(y)}</span><b>${IT(y.e).modo==='conjunto'?NIVEIS[y.e.nivel]:unitsOf(y.e)}</b><button class="link" data-b="loc" data-e="${y.e.id}">Localizar</button></div>`).join('')}</div>
   <div class="grp">Histórico</div><ul class="hist2" style="list-style:none;margin:0;padding:0">${hist.length?hist.map(l=>`<li><span class="t">${l.h}</span>${l.t}</li>`).join(''):'<li style="color:var(--ink3)">Sem movimentações nesta sessão.</li>'}</ul>
   <div class="grp">Observações</div><textarea class="obs" data-need="m" style="width:100%;border:0;border-radius:10px;padding:9px;background:var(--bt);box-shadow:inset 0 0 0 1px var(--chip)" rows="3" placeholder="Anotações da equipe sobre este item…">${it.obs}</textarea>`;}
@@ -116,6 +118,7 @@ export function rebuildAt(x){if(!x||x.sem)return;buildContents(byId(x.m.id),x.p.
 
 /* --------- cliques nos cards --------- */
 export function handleCard(ev,e){const t=ev.target;const tag=t.closest('[data-tag]');if(tag)return tagPop(tag);
+ const oc_=t.closest('[data-ocor]');if(oc_&&e.t==='o'){if(!can())return;e.o.cor=oc_.dataset.ocor;log(`${orgName(e.o)}: cor alterada`);buildContents(e.f,e.p.id);orgOpen(e.f,e.p.id,e.o.id,1);refreshCards();return;}
  const goto=t.closest('[data-goto]');if(goto){const p=e.f.d.partes.find(x=>x.id===goto.dataset.goto);replaceTop({t:'p',f:e.f,p});return;}
  const b=t.closest('[data-b]');if(b){const a=b.dataset.b;
   if(a==='close')return closeStack();if(a==='back')return popTo(S.stack.indexOf(e)-1);
@@ -135,12 +138,12 @@ export function handleCard(ev,e){const t=ev.target;const tag=t.closest('[data-ta
  const act=t.closest('[data-act]');if(act)return entryAct(x,act.dataset.act,act,row);
  if(t.closest('input,textarea,select,.form'))return;
  S.openRow=S.openRow===x.e.id?null:x.e.id;document.querySelectorAll('.irow.open').forEach(r=>{if(r!==row)r.classList.remove('open');});row.classList.toggle('open',S.openRow===x.e.id);}
-stackEl.addEventListener('change',ev=>{if(ev.target.classList.contains('obs')){const e=S.stack.find(s=>s.el.contains(ev.target));if(e&&e.t==='i'){IT(e.x.e).obs=ev.target.value;log(`Observação editada em ${IT(e.x.e).nome}`,e.x.e.ref);toast('Observação salva',null,1500);}}});
+stackEl.addEventListener('change',ev=>{if(ev.target.classList.contains('obs')){const e=S.stack.find(s=>s.el.contains(ev.target));if(e&&e.t==='i'){IT(e.x.e).obs=clean(ev.target.value);log(`Observação editada em ${IT(e.x.e).nome}`,e.x.e.ref);toast('Observação salva',null,1500);}}});
 export function replaceTop(n){const top=S.stack[S.stack.length-1];if(top.t==='o')orgOpen(top.f,top.p.id,top.o.id,0);const i=S.stack.length-1;const old=top.el;
  S.stack.pop();old.classList.add('leave');setTimeout(()=>old.remove(),300);pushCard(n);}
 export function renameInline(e){const h=e.el.querySelector('.sh h3 .tt');const node=e.t==='p'?e.p:e.o;const cur=e.t==='p'?partName(e.f.d,e.p):orgName(e.o);
  h.innerHTML=`<input value="${cur}">`;const inp=h.querySelector('input');inp.focus();inp.select();
- const done=save=>{if(save){const v=inp.value.trim();if(e.t==='p')node.nomeP=v&&v!==partName(e.f.d,{...node,nomeP:''})?v:'';else node.nome=v;log(`Renomeado: ${cur} → ${v||'(automático)'}`);}refreshCards();};
+ const done=save=>{if(save){const v=clean(inp.value);if(e.t==='p')node.nomeP=v&&v!==partName(e.f.d,{...node,nomeP:''})?v:'';else node.nome=v;log(`Renomeado: ${cur} → ${v||'(automático)'}`);}refreshCards();};
  inp.onkeydown=ev=>{if(ev.key==='Enter')done(true);if(ev.key==='Escape')done(false);};inp.onblur=()=>done(true);}
 export function entryAct(x,a,el,row){if(!can())return;const e=x.e,it=IT(e);
  if(a==='dec'||a==='inc'){if(a==='dec'&&e.qtd===0)return;const before=e.qtd;e.qtd+=a==='inc'?1:-1;touch(e);
@@ -155,12 +158,16 @@ export function entryAct(x,a,el,row){if(!can())return;const e=x.e,it=IT(e);
  if(a==='tipo'){const t=e.tipos[+el.dataset.k];t.aus=!t.aus;touch(e);log(`${it.nome} · ${t.n}: ${t.aus?'falta registrada':'encontrado'}`,e.ref);
   if(t.aus)toast(`Falta registrada: <b>${it.nome} · ${t.n}</b>. Aparece na lista de compras.`,()=>{t.aus=false;rerenderRow(e);});rerenderRow(e);return;}
  if(a==='addtipo'){const sp=document.createElement('input');sp.placeholder='Novo tipo';sp.className='tp';sp.style.width='110px';el.replaceWith(sp);sp.focus();
-  sp.onkeydown=ev=>{if(ev.key==='Enter'&&sp.value.trim()){e.tipos=e.tipos||[];e.tipos.push({n:sp.value.trim()});rerenderRow(e);}if(ev.key==='Escape')rerenderRow(e);};return;}
+  sp.onkeydown=ev=>{if(ev.key==='Enter'&&sp.value.trim()){e.tipos=e.tipos||[];e.tipos.push({n:clean(sp.value)});log(`${it.nome}: tipo ${clean(sp.value)} acrescentado`,e.ref);rerenderRow(e);}if(ev.key==='Escape')rerenderRow(e);};return;}
  if(a==='unit')return unitPop(x,e.units.find(u=>u.n===+el.dataset.u),el);
+ if(a==='addunit'){const add=v=>{const n=Math.max(0,...allLoc().filter(y=>y.e.ref===e.ref&&y.e.units).flatMap(y=>y.e.units.map(u=>u.n)))+1;e.units.push(U(n,'boa',null,v));touch(e);log(`${it.nome}: unidade ${n}${v?' ('+v+')':''} registrada`,it.id);closePop();rerenderRow(e);rebuildAt(x);stampUnit(e,{n});};
+  if(!it.ident)return add(null);
+  pop.innerHTML=`<div class="tl">Nova unidade · ${it.ident.nome}</div>${it.ident.ops.map((o,k)=>`<button class="it" data-v="${k}">${o.c?`<span class="dot" style="--sc:${o.c};background:${o.c}"></span>`:''}${o.n}</button>`).join('')}<div style="padding:2px 6px 6px;display:flex;gap:6px"><input id="newOp" placeholder="Outra opção"><button class="pill sm pri" data-v="new">Criar</button></div>`;
+  placePop(el);pop.onclick=ev=>{const b=ev.target.closest('[data-v]');if(!b)return;if(b.dataset.v==='new'){const t=clean(pop.querySelector('#newOp').value);if(!t)return;if(!identOp(it,t))it.ident.ops.push(it.ident.tipo==='cor'?{n:t,c:OCOL[it.ident.ops.length%OCOL.length]}:{n:t});return add(t);}add(it.ident.ops[+b.dataset.v].n);};return;}
  if(a==='ecancel'){e._edit=false;rerenderRow(e);return;}
- if(a==='esave'){const f=row.querySelector('[data-edit]');it.nome=f.querySelector('[name=nome]').value.trim()||it.nome;const cl=f.querySelector('[name=cl]').value;if(cl!==it.cl){it.cl=cl;}
-  const un=f.querySelector('[name=un]');if(un){it.un=un.value;it.min=+f.querySelector('[name=min]').value||0;}it.desc=f.querySelector('[name=desc]').value;
-  f.querySelectorAll('[data-spec]').forEach(i=>{if(i.value.trim())it.spec[i.dataset.spec]=i.value.trim();else delete it.spec[i.dataset.spec];});
+ if(a==='esave'){const f=row.querySelector('[data-edit]');it.nome=clean(f.querySelector('[name=nome]').value)||it.nome;const cl=f.querySelector('[name=cl]').value;if(cl!==it.cl){it.cl=cl;}
+  const un=f.querySelector('[name=un]');if(un){it.un=clean(un.value);it.min=+f.querySelector('[name=min]').value||0;}it.desc=clean(f.querySelector('[name=desc]').value);
+  f.querySelectorAll('[data-spec]').forEach(i=>{if(clean(i.value))it.spec[i.dataset.spec]=clean(i.value);else delete it.spec[i.dataset.spec];});
   e._edit=false;log(`Cadastro editado: ${it.nome}`,it.id);refreshCards();F.forEach(f=>f.d.partes.forEach(p=>buildContents(f,p.id)));toast('Alterações salvas',null,1600);return;}}
 export function itemAction(x,a,card){const e=x.e,it=IT(e);
  if(a==='det')return pushCard({t:'i',f:card.f,p:card.p,o:card.o,x});
@@ -175,12 +182,13 @@ export function itemAction(x,a,card){const e=x.e,it=IT(e);
 /* --------- popovers --------- */
 export const pop=$('#pop');
 export function placePop(el){const r=relRect(el);pop.classList.add('on');const w=pop.offsetWidth,h=pop.offsetHeight;let x=r.x+r.w/2-w/2,y=r.y+r.h+8;
- x=Math.max(8,Math.min(x,app.clientWidth-w-8));if(y+h>app.clientHeight-8)y=r.y-h-8;pop.style.left=x+'px';pop.style.top=y+'px';}
+ x=Math.max(8,Math.min(x,app.clientWidth-w-8));if(y+h>app.clientHeight-8)y=r.y-h-8;pop.style.left=x+'px';pop.style.top=Math.max(8,y)+'px';}
 export function closePop(){pop.classList.remove('on');}
-export function unitPop(x,u,el){const it=IT(x.e);pop.innerHTML=`<div class="tl">${it.nome} · unidade ${u.n}</div>${Object.entries(ESTADOS).map(([k,[n,c]])=>`<button class="it" data-s="${k}"><span class="dot" style="--sc:${c}"></span>${n}${u.estado===k?' ✓':''}</button>`).join('')}
+export function unitPop(x,u,el){const it=IT(x.e);pop.innerHTML=`<div class="tl">${it.nome} · unidade ${u.n}</div>${it.ident?`<div class="vsel">${it.ident.ops.map((o,k)=>`<button data-sv="${k}" class="${o.n===u.v?'on':''}">${o.c?`<i style="background:${o.c}"></i>`:''}${o.n}</button>`).join('')}</div>`:''}${Object.entries(ESTADOS).map(([k,[n,c]])=>`<button class="it" data-s="${k}"><span class="dot" style="--sc:${c}"></span>${n}${u.estado===k?' ✓':''}</button>`).join('')}
  <div class="tl">${u.emp?'Com '+u.emp.para:'Ações'}</div>${u.emp?`<button class="it" data-s="dev">${IC.in}Devolver</button>`:`<button class="it" data-s="emp">${IC.hand}Emprestar…</button>`}
  <button class="it" data-s="mov">${IC.move}Mudar esta unidade de lugar</button><button class="it" data-s="baixa">${IC.trash}Dar baixa</button>`;
- placePop(el);pop.onclick=ev=>{const b=ev.target.closest('[data-s]');if(!b||!can())return;const s=b.dataset.s;closePop();
+ placePop(el);pop.onclick=ev=>{const sv=ev.target.closest('[data-sv]');if(sv&&can()){u.v=it.ident.ops[+sv.dataset.sv].n;touch(x.e);log(`${it.nome}: unidade ${u.n} é ${u.v}`,it.id);closePop();rerenderRow(x.e);stampUnit(x.e,u);return;}
+  const b=ev.target.closest('[data-s]');if(!b||!can())return;const s=b.dataset.s;closePop();
   if(s==='emp')return openLoan(x,u);if(s==='dev')return devolver(x,u,false);if(s==='mov')return startCarry({kind:'unit',x,u});
   if(s==='baixa'){const i=x.e.units.indexOf(u);x.e.units.splice(i,1);log(`${it.nome}: baixa da unidade ${u.n}`,it.id);const rm=!x.e.units.length;if(rm)removeEntry(x);refreshCards();rebuildAt(x);
    toast(`Baixa da unidade ${u.n} de <b>${it.nome}</b>`,()=>{if(rm)restoreEntry(x);x.e.units.splice(i,0,u);refreshCards();rebuildAt(x);});return;}
@@ -195,9 +203,9 @@ export function tagPop(el){if(!can())return;const ref=el.dataset.tag;const node=
  const assign=id=>{node.etq=id;log(`Etiqueta ${id?etqOf(id).t:''} atribuída`);closePop();if(ref==='oc')return renderOC();refreshCards();const l=document.querySelector(`[data-tag="${ref}"].plabel`);l&&l.classList.add('stamp');};
  pop.onclick=ev=>{const b=ev.target.closest('[data-e]');if(!b)return;const v=b.dataset.e;
   if(v==='rm'){node.etq=null;closePop();if(ref==='oc')return renderOC();refreshCards();return;}
-  if(v==='new'){const t=(pop.querySelector('#newTag').value||'').trim().toUpperCase();if(!t)return;const id='e'+(ETQ.length+1)+'_'+Date.now()%1000;ETQ.push({id,t});assign(id);return;}assign(v);};
+  if(v==='new'){const t=clean(pop.querySelector('#newTag').value||'').toUpperCase();if(!t)return;const id='ETQ-'+uid();ETQ.push({id,t});assign(id);return;}assign(v);};
  if(inp)inp.onkeydown=ev=>{if(ev.key==='Enter')pop.querySelector('[data-e=new]').click();};}
-addEventListener('pointerdown',ev=>{if(pop.classList.contains('on')&&!pop.contains(ev.target)&&!ev.target.closest('[data-act=unit],[data-tag]'))closePop();},true);
+addEventListener('pointerdown',ev=>{if(pop.classList.contains('on')&&!pop.contains(ev.target)&&!ev.target.closest('[data-act=unit],[data-act=addunit],[data-tag]'))closePop();},true);
 
 /* --------- modais --------- */
 export const modalEl=$('#modal');
@@ -213,17 +221,19 @@ export function openLoan(x,unit){const it=IT(x.e);const avail=x.e.units.filter(u
   modalEl.onclick=ev=>{const t=ev.target;if(t.closest('[data-mclose]'))return closeModal();const lu=t.closest('[data-lu]');if(lu){u=avail.find(a=>a.n===+lu.dataset.lu);render();return;}
    const lt=t.closest('[data-lt]');if(lt){tipo=lt.dataset.lt;para='';render();return;}const lp=t.closest('[data-lp]');if(lp){para=lp.dataset.lp;render();return;}
    if(t.closest('[data-lok]')){u.emp={para,tipo,desde:Date.now()};touch(x.e);log(`${it.nome} #${u.n} emprestado para ${para} (${TIPOEMP[tipo].toLowerCase()})`,it.id);closeModal();rerenderRow(x.e);stampUnit(x.e,u);toast(`<b>${it.nome} #${u.n}</b> com ${para}. Aparece em Guardar › Devolver.`);}};
-  const ln=modalEl.querySelector('#lname');if(ln){ln.oninput=()=>{para=ln.value.trim();modalEl.querySelector('[data-lok]').disabled=!para;};ln.focus();ln.setSelectionRange(99,99);}};render();}
+  const ln=modalEl.querySelector('#lname');if(ln){ln.oninput=()=>{para=clean(ln.value);modalEl.querySelector('[data-lok]').disabled=!para;};ln.focus();ln.setSelectionRange(99,99);}};render();}
 export function removeEntry(x){const arr=x.sem?SEM.itens:x.o?x.o.itens:x.p.itens;x._i=arr.indexOf(x.e);arr.splice(x._i,1);}
 export function restoreEntry(x){const arr=x.sem?SEM.itens:x.o?x.o.itens:x.p.itens;arr.splice(x._i??arr.length,0,x.e);}
 export function openRemove(x){const it=IT(x.e);let q=1;
  const body=it.modo==='contavel'?`<label>Quantidade a dar baixa<span class="rc" style="margin:4px 0 0"><button data-rq="-">−</button><b id="rqv" style="font:600 1.3rem var(--cond);min-width:34px;text-align:center">1</b><button data-rq="+">+</button></span></label>`
-  :it.modo==='unidades'?`<div style="font-size:.86rem;color:var(--ink2)">Para dar baixa numa unidade específica, toque no quadradinho dela.</div>`:'';
+  :it.modo==='unidades'?`<div style="font-size:.86rem;color:var(--ink2)">Para dar baixa numa unidade específica, toque no quadradinho dela.</div>${it.ident?`<label>Dar baixa de todas de um tipo<div class="vsel">${it.ident.ops.map(o=>[o,x.e.units.filter(u=>u.v===o.n).length]).filter(y=>y[1]).map(([o,q])=>`<button data-rmv="${o.n}">${o.c?`<i style="background:${o.c}"></i>`:''}${o.n} · ${q}</button>`).join('')}</div></label>`:''}`:'';
  modal(`<h4>Remover ${it.nome}</h4><div class="form">${body}</div>
   <div class="grp">Dar baixa</div><div style="font-size:.86rem;color:var(--ink2)">Quebrou, acabou ou foi descartado. Fica registrado no histórico.</div>
   ${isAdmin()?`<div class="grp">Apagar cadastro</div><div style="font-size:.86rem;color:var(--ink2)">Cadastro errado ou duplicado. Some deste lugar${allLoc().filter(y=>y.e.ref===it.id).length>1?'; o item continua nos outros lugares':''}.</div>`:''}
   <div class="mf"><button class="pill" data-mclose>Cancelar</button>${isAdmin()?`<button class="pill danger" data-rm="del">${IC.trash}Apagar</button>`:''}<button class="pill pri" data-rm="baixa">Dar baixa${it.modo==='unidades'?' de tudo':''}</button></div>`);
  modalEl.onclick=ev=>{const t=ev.target;if(t.closest('[data-mclose]'))return closeModal();const rq=t.closest('[data-rq]');if(rq){q=Math.max(1,Math.min(x.e.qtd||1,q+(rq.dataset.rq==='+'?1:-1)));modalEl.querySelector('#rqv').textContent=q;return;}
+  const rv=t.closest('[data-rmv]');if(rv){const v=rv.dataset.rmv,antes=[...x.e.units],q=antes.filter(u=>u.v===v).length;closeModal();x.e.units=antes.filter(u=>u.v!==v);const vazio=!x.e.units.length;if(vazio)removeEntry(x);log(`${it.nome}: baixa de ${q} (${v})`,it.id);refreshCards();rebuildAt(x);
+   toast(`Baixa de ${q} × <b>${it.nome}</b> (${v})`,()=>{if(vazio)restoreEntry(x);x.e.units=antes;refreshCards();rebuildAt(x);});return;}
   const rm=t.closest('[data-rm]');if(!rm)return;closeModal();
   if(rm.dataset.rm==='baixa'&&it.modo==='contavel'){const b=x.e.qtd;x.e.qtd=Math.max(0,x.e.qtd-q);log(`${it.nome}: baixa de ${q} ${it.un}`,it.id);refreshCards();rebuildAt(x);toast(`Baixa de ${q} ${it.un} de <b>${it.nome}</b>`,()=>{x.e.qtd=b;refreshCards();rebuildAt(x);});return;}
   removeEntry(x);log(`${it.nome}: ${rm.dataset.rm==='del'?'cadastro apagado':'baixa'} em ${pathOf(x)}`,it.id);refreshCards();rebuildAt(x);
@@ -269,7 +279,7 @@ export function renderPal(){const mode=S.pal.mode;
 }
 export function renderBusca(){const s=norm(q.value.trim());let h='';palRes=[];
  const row=(r,ic,t,p,right,acts)=>{palRes.push(r);const k=palRes.length-1;return `<div class="r ${k===palSel?'on':''}" data-k="${k}">${ic}<div><div class="t">${t}</div><div class="p">${p}</div></div><span>${right||''}</span><div class="ra">${acts}</div></div>`;};
- const groups={};for(const x of allLoc()){if(s&&!norm(IT(x.e).nome).includes(s)&&!(x.m&&norm(pathOf(x)).includes(s)))continue;(groups[x.e.ref]=groups[x.e.ref]||[]).push(x);}
+ const groups={};for(const x of allLoc()){if(s&&!norm(IT(x.e).nome).includes(s)&&!(x.m&&norm(pathOf(x)).includes(s))&&!(x.e.units&&x.e.units.some(u=>u.v&&norm(u.v).includes(s))))continue;(groups[x.e.ref]=groups[x.e.ref]||[]).push(x);}
  const its=Object.entries(groups).slice(0,30);if(its.length)h+='<div class="ph">Itens</div>';
  for(const [ref,xs] of its){const it=ITEMS[ref];const tot=xs.reduce((a,x)=>a+(countable(x.e)?unitsOf(x.e):0),0);const al=xs.flatMap(x=>alertsOf(x.e)).filter(a=>a[0]==='red').map(a=>a[1]);
   h+=row({t:'i',xs},clsH(it.cl),it.nome,(xs.length>1?`${xs.length} lugares`:pathOf(xs[0]))+(al.length?' · '+al.join(' · '):''),it.modo==='conjunto'?NIVEIS[xs[0].e.nivel]:`<b style="font:600 1.25rem var(--cond)">${tot}</b>`,
@@ -295,32 +305,50 @@ $('#pres').addEventListener('click',ev=>{const t=ev.target;if(!S.pal)return;cons
 $('#scrim').onclick=()=>{if(modalEl.classList.contains('on'))return closeModal();closePalette();};
 
 /* ================= criar item ================= */
-export function openItemCreator(opt={}){const st={nome:opt.nome||'',cl:sugCl(opt.nome||''),manual:false,modo:null,q:1,un:'un.',min:0,nivel:2,tipos:'',desc:'',spec:{}};
+export function openItemCreator(opt={}){const IOPS={cor:[['Amarelo','#E0B12E'],['Vermelho','#C8553D'],['Azul','#3E7CB1'],['Verde','#4C9A6A'],['Laranja','#E07A1F'],['Roxo','#8E5BD0'],['Preto','#2b3138'],['Cinza','#7A8794']],tam:[['Pequena'],['Média'],['Grande']]};
+ const st={ik:'',inome:'',iops:'',iq:{},nome:opt.nome||'',cl:sugCl(opt.nome||''),manual:false,modo:null,q:1,un:'un.',min:0,nivel:2,tipos:'',desc:'',spec:{}};
+ const iopts=()=>st.ik==='outro'?[...new Set(st.iops.split(',').map(s=>clean(s)).filter(Boolean))].map(n=>[n]):(IOPS[st.ik]||[]);
+ const itot=()=>iopts().reduce((a,[n])=>a+(st.iq[n]||0),0);
+ const identH=()=>`<label>Identificador das unidades <span style="font-weight:500;color:var(--ink3)">o que diferencia uma unidade da outra</span><div class="gsel">${[['','Nenhum'],['cor','Cor'],['tam','Tamanho'],['outro','Outro']].map(([k,v])=>`<button data-ik="${k}" class="${k===st.ik?'on':''}">${v}</button>`).join('')}</div></label>
+  ${st.ik==='outro'?`<div class="row"><label>Nome<input id="cin" value="${st.inome}" placeholder="Ex.: Ponta"></label><label>Opções (separe por vírgula)<input id="cio" value="${st.iops}" placeholder="Ex.: Fenda, Phillips"></label></div>`:''}
+  ${st.ik?`<div class="vsel big">${iopts().map(([n,c])=>`<span class="${st.iq[n]?'on':''}"><button data-iv="${n}">${c?`<i style="background:${c}"></i>`:''}${n}<b>${st.iq[n]||0}</b></button>${st.iq[n]?`<button data-ivm="${n}" aria-label="Tirar uma">−</button>`:''}</span>`).join('')||'<span style="color:var(--ink3);font-size:.8rem">Digite as opções acima.</span>'}</div><div style="font-size:.76rem;color:var(--ink3)">Toque numa opção para cada unidade que existe.</div>`:''}`;
  const render=()=>{const cl=st.cl||'div';const modo=st.modo||CL[cl].m;const keys=SPECK[cl]||[];const d=opt.dest;
   modal(`<h4>Novo item</h4><div style="color:var(--ink2);font-size:.86rem">${d?`Vai direto para <b>${d.o?orgName(d.o):partName(d.f.d,d.p)}</b>.`:'Depois do cadastro você escolhe onde guardar, no 3D.'}</div>
   <div class="form"><label>Nome<input id="cn" value="${st.nome}" placeholder="Ex.: Broca 4 mm, Cola epóxi, Conector XT60"></label>
    <label>Classe <span style="font-weight:500;color:var(--ink3)">${st.cl?CL[st.cl].n+(st.manual?'':' (sugerida pelo nome)'):'escolha ou digite o nome'}</span><div class="clsrow" style="gap:6px">${Object.keys(CL).map(c=>`<span data-ccl="${c}" style="cursor:pointer;opacity:${c===st.cl?1:.4};${c===st.cl?'outline:2px solid var(--ink);outline-offset:2px;border-radius:13px':''}">${clsH(c)}</span>`).join('')}</div></label>
    <label>Como controlar<div class="gsel">${[['unidades','Por unidade (patrimônio)'],['contavel','Por quantidade (consumível)'],['conjunto','Item de conjunto (caixa, kit)']].map(([k,v])=>`<button data-cm="${k}" class="${k===modo?'on':''}">${v}</button>`).join('')}</div></label>
    ${modo==='conjunto'?`<div class="row"><label>Quão cheio<div class="gsel">${NIVEIS.map((n,k)=>`<button data-cnv="${k}" class="${k===st.nivel?'on':''}">${n}</button>`).join('')}</div></label></div><label>Tipos (separe por vírgula)<input id="ctp" value="${st.tipos}" placeholder="Ex.: M2, M3, M4"></label>`
-   :`<div class="row"><label>${modo==='unidades'?'Unidades':'Quantidade'}<span class="rc" style="margin:2px 0 0"><button data-cq="-">−</button><b style="font:600 1.3rem var(--cond);min-width:34px;text-align:center">${st.q}</b><button data-cq="+">+</button></span></label>${modo==='contavel'?`<label>Unidade<input id="cu" value="${st.un}"></label><label>Mínimo<input id="cmn" type="number" value="${st.min}"></label>`:''}</div>`}
+   :`<div class="row"><label>${modo==='unidades'?'Unidades':'Quantidade'}<span class="rc" style="margin:2px 0 0"><button data-cq="-">−</button><b style="font:600 1.3rem var(--cond);min-width:34px;text-align:center">${modo==='unidades'&&st.ik?itot():st.q}</b><button data-cq="+">+</button></span></label>${modo==='contavel'?`<label>Unidade<input id="cu" value="${st.un}"></label><label>Mínimo<input id="cmn" type="number" value="${st.min}"></label>`:''}</div>${modo==='unidades'?identH():''}`}
    ${keys.filter(k=>k!=='Tipos').map(k=>`<label>${k}<input data-cs="${k}" value="${st.spec[k]||''}"></label>`).join('')}<label>Descrição<textarea id="cd" rows="2">${st.desc}</textarea></label></div>
   <div class="mf"><button class="pill" data-mclose>Cancelar</button>${d?`<button class="pill pri" data-cok="here">${IC.in}Criar e guardar aqui</button>`:`<button class="pill" data-cok="sem">Criar sem lugar</button><button class="pill pri" data-cok="place">${IC.loc}Criar e escolher lugar</button>`}</div>`);
-  const cn=modalEl.querySelector('#cn');cn.focus();cn.setSelectionRange(99,99);
+  const cio=modalEl.querySelector('#cio');if(cio)cio.onchange=()=>{sync();render();};
+  const cn=modalEl.querySelector('#cn');if(!st.ik){cn.focus();cn.setSelectionRange(99,99);}
   cn.oninput=()=>{st.nome=cn.value;if(!st.manual){const s=sugCl(cn.value);if(s!==st.cl){st.cl=s;st.modo=null;sync();render();}}};};
- const sync=()=>{const g=id=>modalEl.querySelector(id);if(g('#cn'))st.nome=g('#cn').value;if(g('#cu'))st.un=g('#cu').value;if(g('#cmn'))st.min=+g('#cmn').value||0;if(g('#cd'))st.desc=g('#cd').value;if(g('#ctp'))st.tipos=g('#ctp').value;
+ const sync=()=>{const g=id=>modalEl.querySelector(id);if(g('#cn'))st.nome=g('#cn').value;if(g('#cu'))st.un=g('#cu').value;if(g('#cmn'))st.min=+g('#cmn').value||0;if(g('#cd'))st.desc=g('#cd').value;if(g('#ctp'))st.tipos=g('#ctp').value;if(g('#cin'))st.inome=clean(g('#cin').value);if(g('#cio'))st.iops=g('#cio').value;
   modalEl.querySelectorAll('[data-cs]').forEach(i=>st.spec[i.dataset.cs]=i.value);};
  render();
  modalEl.onclick=ev=>{const t=ev.target;if(t.closest('[data-mclose]'))return closeModal();
   const c=t.closest('[data-ccl]');if(c){sync();st.cl=c.dataset.ccl;st.manual=true;st.modo=null;return render();}
   const cm=t.closest('[data-cm]');if(cm){sync();st.modo=cm.dataset.cm;return render();}const cv=t.closest('[data-cnv]');if(cv){sync();st.nivel=+cv.dataset.cnv;return render();}
-  const cq=t.closest('[data-cq]');if(cq){sync();st.q=Math.max(1,st.q+(cq.dataset.cq==='+'?1:-1));return render();}
+  const cq=t.closest('[data-cq]');if(cq){if(st.ik&&(st.modo||CL[st.cl||'div'].m)==='unidades')return;sync();st.q=Math.max(1,st.q+(cq.dataset.cq==='+'?1:-1));return render();}
+  const ik=t.closest('[data-ik]');if(ik){sync();st.ik=ik.dataset.ik;st.iq={};return render();}
+  const iv=t.closest('[data-iv]');if(iv){sync();st.iq[iv.dataset.iv]=(st.iq[iv.dataset.iv]||0)+1;return render();}
+  const ivm=t.closest('[data-ivm]');if(ivm){sync();st.iq[ivm.dataset.ivm]--;return render();}
   const ok=t.closest('[data-cok]');if(!ok)return;sync();if(!st.nome.trim()){modalEl.querySelector('#cn').focus();return toast('Dê um nome ao item',null,1600);}
-  const cl=st.cl||'div';const modo=st.modo||CL[cl].m;const id='n'+Date.now();const spec={};for(const [k,v] of Object.entries(st.spec))if(v&&v.trim())spec[k]=v.trim();
-  ITEMS[id]={id,nome:st.nome.trim(),cl,modo,un:st.un||'un.',min:st.min,desc:st.desc,spec,obs:''};
-  const e=E(id,{t:Date.now()});if(modo==='unidades')e.units=Array.from({length:st.q},(_,k)=>U(k+1));else if(modo==='contavel')e.qtd=st.q;else{e.nivel=st.nivel;e.tipos=st.tipos.split(',').map(s=>s.trim()).filter(Boolean).map(n=>({n}));}
-  log(`Cadastrado: ${st.nome.trim()}`,id);closeModal();
+  st.nome=clean(st.nome);st.desc=clean(st.desc);st.un=clean(st.un);if(!st.nome)return;
+  const cl=st.cl||'div';const modo=st.modo||CL[cl].m;const spec={};for(const [k,v] of Object.entries(st.spec))if(v&&clean(v))spec[k]=clean(v);
+  let ident=null,uv=null;if(modo==='unidades'&&st.ik){const ops=iopts().filter(([n])=>st.iq[n]>0);if(!ops.length)return toast('Marque quantas unidades existem de cada opção',null,2400);
+   ident={nome:st.ik==='cor'?'Cor':st.ik==='tam'?'Tamanho':(st.inome||'Tipo'),tipo:st.ik==='cor'?'cor':'texto',ops:ops.map(([n,c])=>c?{n,c}:{n})};uv=ops.flatMap(([n])=>Array(st.iq[n]).fill(n));}
+  /* mesmo nome e mesmo modo: é o mesmo item em mais um lugar, não um cadastro novo */
+  const ja=Object.values(ITEMS).find(i=>norm(i.nome)===norm(st.nome)&&i.modo===modo);const id=ja?ja.id:'I'+uid();
+  if(ja){if(ident){ja.ident=ja.ident||{nome:ident.nome,tipo:ident.tipo,ops:[]};for(const o of ident.ops)if(!identOp(ja,o.n))ja.ident.ops.push(o);}}
+  else ITEMS[id]={id,nome:st.nome,cl,modo,un:st.un||'un.',min:st.min,desc:st.desc,spec,obs:'',...(ident?{ident}:{})};
+  const n0=ja&&modo==='unidades'?Math.max(0,...allLoc().filter(y=>y.e.ref===id&&y.e.units).flatMap(y=>y.e.units.map(u=>u.n))):0;
+  const e=E(id,{t:Date.now()});if(modo==='unidades')e.units=uv?uv.map((v,k)=>U(n0+k+1,'boa',null,v)):Array.from({length:st.q},(_,k)=>U(n0+k+1));else if(modo==='contavel')e.qtd=st.q;else{e.nivel=st.nivel;e.tipos=st.tipos.split(',').map(s=>clean(s)).filter(Boolean).map(n=>({n}));}
+  if(ja)toast(`<b>${st.nome}</b> já estava cadastrado. Entrou como mais um lugar do mesmo item.`,null,3600);
+  log(`Cadastrado: ${st.nome}`,id);closeModal();
   if(ok.dataset.cok==='here')return insertDirect({kind:'new',e},opt.dest,relRect(modalEl));
-  if(ok.dataset.cok==='sem'){SEM.itens.push(e);return toast(`<b>${st.nome.trim()}</b> cadastrado sem lugar. Aparece em Guardar › Sem lugar.`);}
+  if(ok.dataset.cok==='sem'){SEM.itens.push(e);save();return toast(`<b>${st.nome}</b> cadastrado sem lugar. Aparece em Guardar › Sem lugar.`);}
   startCarry({kind:'new',e,destM:opt.destM});};}
 
 /* ================= criar organizador (seletor) ================= */
@@ -345,7 +373,7 @@ export function renderOC(){const s=S.oc;const t=OT[OTK[s.ti]];const node={etq:s.
  const on=ocEl.querySelector('#on');on.oninput=()=>s.nome=on.value;}
 ocEl.addEventListener('click',ev=>{const s=S.oc;if(!s)return;const t=ev.target;const tag=t.closest('[data-tag]');if(tag)return tagPop(tag);
  const b=t.closest('[data-o]');if(b){const a=b.dataset.o;if(a==='prev'||a==='next'){s.ti=(s.ti+(a==='next'?1:-1)+OTK.length)%OTK.length;if(!s.corManual)s.cor=OT[OTK[s.ti]].cor;buildShow(a==='next'?1:-1);renderOC();return;}
-  if(a==='cancel')return closeOC();if(a==='ok'){const o=O(OTK[s.ti],s.cor,s.tam,{nome:s.nome.trim(),etq:s.etq});log(`Organizador criado: ${orgName(o)}`);const from=relRect(ocEl);const d=s.dest,dm=s.destM;closeOC(true);
+  if(a==='cancel')return closeOC();if(a==='ok'){const o=O(OTK[s.ti],s.cor,s.tam,{nome:clean(s.nome),etq:s.etq});log(`Organizador criado: ${orgName(o)}`);const from=relRect(ocEl);const d=s.dest,dm=s.destM;closeOC(true);
    if(d)return insertDirect({kind:'neworg',o},{f:d.f,p:d.p,o:null},from);return startCarry({kind:'neworg',o,destM:dm});}}
  const c=t.closest('[data-oc]');if(c){s.cor=c.dataset.oc;s.corManual=c.dataset.oc!==OT[OTK[s.ti]].cor;buildShow(0);renderOC();return;}const z=t.closest('[data-oz]');if(z){s.tam=z.dataset.oz;buildShow(0);renderOC();}});
 export function closeOC(keep){S.oc=null;ocEl.classList.remove('on');ocx.classList.remove('on');if(show){scene.remove(show);show=null;}home();if(!keep)goHome();}
@@ -415,7 +443,7 @@ export async function localizarPath(t,x,after){if(S.loc)return;closeStack(true);
  crumbsEl.innerHTML=steps.map((s,i)=>`${i?'<i>›</i>':''}<span class="glass" data-c="${i}">${s}</span>`).join('');const on=i=>{const el=crumbsEl.querySelector(`[data-c="${i}"]`);el&&el.classList.add('on');};
  home();S.lab=f.d.lab;applyStyle();updateLabChip();camTo(L.c,fitD(L.d),DIR,700);on(0);await wait(1000);
  S.sel=f;focusF(f);on(1);await wait(1000);
- if(t.p){setOpen(f,t.p.id);focusPart(f,t.p.id);on(2);await wait(1000);}
+ if(t.p){S.loc.pid=t.p.id;setOpen(f,t.p.id);focusPart(f,t.p.id);on(2);await wait(1000);}
  if(t.o){orgOpen(f,t.p.id,t.o.id,1);focusOrg(f,t.p.id,t.o);on(3);await wait(1000);}
  if(x){on(steps.length-1);let ic=null;f.parts[t.p.id].content.traverse(o=>{if(!ic&&o.userData.entry===x.e.id&&o.userData.icon)ic=o.userData.icon;});
   if(ic){const s0=ic.scale.x;tween({ms:900,ease:'lin',update:p=>{const k=1+.6*Math.sin(p*Math.PI*3)*(1-p);ic.scale.set(s0*k,s0*k,1);}});}await wait(700);}
@@ -441,9 +469,13 @@ export function openCompras(){const sug=sugCompras();const sel=new Set(sug.map((
  modalEl.onclick=ev=>{const t=ev.target;if(t.closest('[data-mclose]'))return closeModal();const bs=t.closest('[data-bs]');if(bs){const i=+bs.dataset.bs;bs.checked?sel.add(i):sel.delete(i);return;}
   if(t.closest('[data-bimp]')){[...sel].sort((a,b)=>a-b).forEach(i=>BUY.push(sug[i]));log(`Lista de compras: ${sel.size} itens importados`);return openCompras();}
   const ok=t.closest('[data-bok]');if(ok){const b=BUY[+ok.dataset.bok];const it=IT(b.x.e);if(it.modo==='contavel'){b.x.e.qtd+=b.q;}else{b.x.e.tipos.forEach(t=>t.aus=false);b.x.e.nivel=3;}touch(b.x.e);
-   BUY.splice(+ok.dataset.bok,1);log(`Comprado: ${it.nome}${it.modo==='contavel'?' (+'+b.q+' '+it.un+')':''}`,it.id);rebuildAt(b.x);refreshCards();toast(`<b>${it.nome}</b> reposto em ${pathOf(b.x)}`);return openCompras();}};
+   COMPRADOS.push({...b,em:Date.now()});BUY.splice(+ok.dataset.bok,1);log(`Comprado: ${it.nome}${it.modo==='contavel'?' (+'+b.q+' '+it.un+')':''}`,it.id);rebuildAt(b.x);refreshCards();toast(`<b>${it.nome}</b> reposto em ${pathOf(b.x)}`);return openCompras();}};
  modalEl.oninput=ev=>{const bq=ev.target.closest('[data-bq]');if(bq)BUY[+bq.dataset.bq].q=Math.max(1,+bq.value||1);};}
 $('#buyBtn').onclick=openCompras;
+$('#recBtn').onclick=()=>{modal(`<h4>Recado do quadro</h4><div style="color:var(--ink2);font-size:.86rem">Aparece no quadro branco do laboratório. Até 4 linhas curtas.</div><div class="form"><textarea id="rec" rows="4">${RECADO.linhas.join('\n')}</textarea></div><div class="mf"><button class="pill" data-mclose>Cancelar</button><button class="pill pri" data-rok>Salvar</button></div>`);
+ modalEl.onclick=ev=>{if(ev.target.closest('[data-mclose]'))return closeModal();if(ev.target.closest('[data-rok]')){RECADO.linhas=modalEl.querySelector('#rec').value.split('\n').map(clean).filter(Boolean).slice(0,4);setRecado(RECADO.linhas);log('Recado do quadro alterado');closeModal();toast('Recado atualizado no quadro',null,1800);}};};
+$('#resetBtn').onclick=()=>{modal(`<h4>Restaurar a demonstração</h4><div style="color:var(--ink2);font-size:.9rem">Apaga tudo o que foi cadastrado e movido neste navegador e volta aos dados de exemplo.</div><div class="mf"><button class="pill" data-mclose>Cancelar</button><button class="pill danger" data-rst>Restaurar</button></div>`);
+ modalEl.onclick=ev=>{if(ev.target.closest('[data-mclose]'))return closeModal();if(ev.target.closest('[data-rst]'))resetDemo();};};
 $('#labelsBtn').onclick=()=>{const used=new Map();for(const m of M){m.etq&&used.set(m.etq,m.nome);for(const p of m.partes){p.etq&&used.set(p.etq,`${m.nome} › ${partName(m,p)}`);p.orgs.forEach(o=>o.etq&&used.set(o.etq,orgName(o)));}}
  modal(`<h4>Etiquetas</h4><div style="color:var(--ink2);font-size:.85rem">Folha para imprimir. O QR aqui é só um padrão visual; na versão real ele abre o lugar no app.</div><div class="mb"><div class="sheetlab">${ETQ.map(e=>`<div class="lbl">${qrSvg(e.t)}<div><b>${e.t}</b><small>${used.get(e.id)||'sem uso'}</small></div></div>`).join('')}</div></div><div class="mf"><button class="pill" data-mclose>Fechar</button></div>`,true);modalEl.onclick=ev=>{if(ev.target.closest('[data-mclose]'))closeModal();};};
 $('#histBtn').onclick=()=>{modal(`<h4>Histórico</h4><div class="mb"><ul class="hist2" style="list-style:none;padding:0;margin:0">${LOG.map(l=>`<li><span class="t">${l.h}</span>${l.t}</li>`).join('')}</ul></div><div class="mf"><button class="pill" data-mclose>Fechar</button></div>`);modalEl.onclick=ev=>{if(ev.target.closest('[data-mclose]'))closeModal();};};
@@ -453,6 +485,8 @@ export const vs=$('#vsheet');
 export function startVist(){closeStack(true);deselect();const lab=S.lab||'man';focusLab(lab,true);const route=F.filter(f=>f.d.lab===lab&&f.d.partes.length).sort((a,b)=>stats(b.d).al-stats(a.d).al);
  S.vist={route,i:0,ok:new Set(),fix:new Set(),open:null};vs.classList.add('on');home();vistGo();}
 export function stopVist(){if(S.vist){const f=S.vist.route[S.vist.i];f&&setOpen(f,null);}S.vist=null;vs.classList.remove('on');setMode('nav');S.sel=null;goHome();home();}
+/* a parte conferida guarda a data: a vistoria seguinte usa isso para priorizar */
+export function conferido(f){if(!f)return;const em=Date.now(),por=S.me||'';for(const p of f.d.partes)p.conf={em,por};save();}
 export function vistGo(){const v=S.vist;const f=v.route[v.i];if(!f){renderVist();return;}S.sel=f;const dist=Math.max(8,Math.min(12,f.size*6));const t=f.center.clone();t.y=Math.min(t.y,1);
  const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1);const wpp=2*dist*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))/app.clientHeight;t.addScaledVector(up,-app.clientHeight*.22*wpp);camTo(t,dist);renderVist();}
 export function renderVist(){const v=S.vist;if(!v)return;const n=v.route.length;const f=v.route[v.i];
@@ -468,7 +502,7 @@ export function renderVist(){const v=S.vist;if(!v)return;const n=v.route.length;
   <div class="ft"><button class="pill pri" data-v="next">${v.i<n-1?'Próximo móvel':'Concluir'} ${IC.next}</button></div>`;}
 vs.addEventListener('click',ev=>{const v=S.vist;if(!v)return;const b=ev.target.closest('[data-v]');
  if(!b){const row=ev.target.closest('.irow');if(!row)return;const x=locE(row.dataset.item);const act=ev.target.closest('[data-act]');if(act){entryAct(x,act.dataset.act,act,row);v.fix.add(x.e.id);}const ia=ev.target.closest('[data-a]');if(ia&&ia.dataset.a!=='det')itemAction(x,ia.dataset.a,{});return;}
- const a=b.dataset.v;if(a==='end')return stopVist();if(a==='next'){setOpen(v.route[v.i],null);v.i++;v.open=null;vistGo();return;}
+ const a=b.dataset.v;if(a==='end')return stopVist();if(a==='next'){const fv=v.route[v.i];setOpen(fv,null);conferido(fv);v.i++;v.open=null;vistGo();return;}
  const id=b.closest('[data-vi]').dataset.vi;if(a==='ok'){v.ok.add(id);v.fix.delete(id);if(v.open===id)v.open=null;log(`Vistoria: ${IT(locE(id).e).nome} confere`);}
  if(a==='fix'){v.open=v.open===id?null:id;v.ok.delete(id);}renderVist();});
 
@@ -511,12 +545,12 @@ export function pickLab(){ray.setFromCamera(ndc,camera);const fl=[];for(const L 
 export function pickOrg(f,pid){ray.setFromCamera(ndc,camera);const ms=[];f.parts[pid].content.traverse(o=>{if(o.isMesh&&o.userData.org)ms.push(o);});const h=ray.intersectObjects(ms,false)[0];return h?f.d.partes.find(p=>p.id===pid).orgs.find(o=>o.id===h.object.userData.org):null;}
 cvs.addEventListener('pointermove',ev=>{setNdc(ev);needPick=true;
  if(drag){ray.setFromCamera(ndc,camera);const hit=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),hit)){const sn=v=>Math.round(v*4)/4;const L=byLab(drag.f.d.lab);
-  drag.f.g.position.x=Math.max(L.x0+.4,Math.min(L.x1-.4,sn(hit.x-drag.ox)));drag.f.g.position.z=Math.max(-RZ+.4,Math.min(RZ-.4,sn(hit.z-drag.oz)));drag.moved=true;}}});
+  const nx=sn(hit.x-drag.ox),nz=sn(hit.z-drag.oz);if(inLab(drag.f.d.lab,nx,nz)){drag.f.g.position.set(nx,fyW(nx,nz),nz);drag.moved=true;}}}});
 cvs.addEventListener('pointerleave',()=>{ptr.in=false;setHover(null);tip.classList.remove('on');});
 cvs.addEventListener('pointerdown',ev=>{down={x:ev.clientX,y:ev.clientY};setNdc(ev);
  if(S.edit){const f=pickF();if(f){S.sel=f;applyStyle();ray.setFromCamera(ndc,camera);const hit=new THREE.Vector3();ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),hit);
   drag={f,ox:hit.x-f.g.position.x,oz:hit.z-f.g.position.z,moved:false};controls.enabled=false;cvs.setPointerCapture(ev.pointerId);}}});
-cvs.addEventListener('pointerup',ev=>{if(drag){const d=drag;drag=null;controls.enabled=true;if(d.moved){d.f.d.pos=[d.f.g.position.x,0,d.f.g.position.z];measure(d.f);log(`${d.f.d.nome}: posição alterada`);}down=null;return;}
+cvs.addEventListener('pointerup',ev=>{if(drag){const d=drag;drag=null;controls.enabled=true;if(d.moved){d.f.d.pos=[d.f.g.position.x,d.f.g.position.y,d.f.g.position.z];measure(d.f);log(`${d.f.d.nome}: posição alterada`);}down=null;return;}
  if(!down)return;const mv=Math.hypot(ev.clientX-down.x,ev.clientY-down.y);down=null;if(mv>6||ev.button!==0)return;setNdc(ev);click();});
 cvs.addEventListener('dblclick',()=>{if(S.carry||S.edit||S.vist||S.oc)return;const f=pickF();if(f)openStack([{t:'m',f}]);});
 export function setHover(f){if(S.hover===f)return;const p=S.hover;S.hover=f;if(p)tween({ms:130,key:p.d.id+'h',update:t=>p.v.hover=1-t});if(f)tween({ms:130,key:f.d.id+'h',update:t=>f.v.hover=t});}
@@ -547,53 +581,69 @@ addEventListener('pointerup',()=>{udrag=null;});
 /* ================= sobreposições ================= */
 export const v3=new THREE.Vector3();
 export function project(p){v3.copy(p).project(camera);return [(v3.x+1)/2*app.clientWidth,(1-v3.y)/2*app.clientHeight];}
-export function refreshBadges(){for(const f of F){const n=stats(f.d).al;f.badge.innerHTML=`${IC.alert}${n}`;f.badge.dataset.n=n;}}
-export function placeOverlays(){for(const f of F){const n=+f.badge.dataset.n;const show_=n&&!S.edit&&!S.oc&&(!S.lab||f.d.lab===S.lab)&&f.cut<.5&&(!S.stack.length||S.stack[0].f===f)&&!(S.sel===f&&acard.classList.contains('on'));
-  f.badge.style.opacity=show_?1:0;if(show_){const [x,y]=project(f.anchor);f.badge.style.left=x+'px';f.badge.style.top=y+'px';}}
+export function refreshBadges(){save();for(const f of F){const n=stats(f.d).al;f.badge.innerHTML=`${IC.alert}${n}`;f.badge.dataset.n=n;}}
+export function placeOverlays(){for(const f of F){const n=+f.badge.dataset.n;const show_=n&&!S.edit&&!S.oc&&!S.loc&&S.lab===f.d.lab&&f.cut<.5&&(!S.stack.length||S.stack[0].f===f)&&!(S.sel===f&&acard.classList.contains('on'));
+  let vis=show_,x=0,y=0;if(show_){[x,y]=project(f.anchor);const W=app.clientWidth,H=app.clientHeight;if(y<74||y>H-8||x<8||x>W-8)vis=false;if(S.stack.length&&(mob()?y>H-(S.sheetH||H*.56)-6:x>W-450))vis=false;}
+  f.badge.style.opacity=vis?1:0;if(vis){f.badge.style.left=x+'px';f.badge.style.top=y+'px';}}
  if(S.sel&&acard.classList.contains('on')&&!mob()){const [x,y]=project(S.sel.anchor);let l=x+26,t=y-30;if(l+350>app.clientWidth-12)l=x-26-340;t=Math.max(70,Math.min(t,app.clientHeight-acard.offsetHeight-20));acard.style.left=l+'px';acard.style.top=t+'px';}
- if(tip.classList.contains('on')){tip.style.left=ptr.x+'px';tip.style.top=ptr.y+'px';}}
+ if(tip.classList.contains('on')){tip.style.left=ptr.x+'px';tip.style.top=ptr.y+'px';tip.style.transform=(ptr.x>app.clientWidth-(S.stack.length&&!mob()?640:200))?'translate(calc(-100% - 14px),-130%)':'';}}
 refreshBadges();
 
 /* ================= navegação entre laboratórios ================= */
 export const LT=LABS.map(L=>{const el=document.createElement('button');el.className='labtag';app.appendChild(el);el.onclick=()=>focusLab(L.id);el.onmouseenter=()=>S.labHover=L.id;el.onmouseleave=()=>S.labHover=null;return {L,el};});
 export function labTags(){const on=viewMode()==='over'&&!S.edit;for(const {L,el} of LT){if(!on){el.classList.remove('vis');continue;}
   const fs=F.filter(f=>f.d.lab===L.id);let u=0,al=0;for(const f of fs){const st=stats(f.d);u+=st.u;al+=st.al;}
-  const h=`<b>${L.nome.replace('Laboratório de ','')}</b><span>${fs.length} móveis · ${u} itens${al?` · <em>${al} alertas</em>`:''}</span><i>Entrar</i>`;if(el.dataset.h!==h){el.innerHTML=h;el.dataset.h=h;}
-  const [x,y]=project(L.c.clone().add(new THREE.Vector3(0,2.9,0)));el.style.left=x+'px';el.style.top=y+'px';el.classList.add('vis');el.classList.toggle('on',S.labHover===L.id);}}
+  const h=`<b>${L.nome.replace('Laboratório de ','')}</b><span class="cnts"><span class="cnt" title="unidades">${IC.stack}${u}</span><span class="cnt" title="móveis">${IC.open}${fs.length}</span>${al?`<span class="cnt w" title="alertas">${IC.alert}${al}</span>`:''}</span><i>Entrar${IC.next}</i>`;if(el.dataset.h!==h){el.innerHTML=h;el.dataset.h=h;}
+  let [x,y]=project(L.c.clone().add(new THREE.Vector3(0,3.1,0)));x=Math.max(130,Math.min(app.clientWidth-130,x));y=Math.max(mob()?150:120,y);el.style.left=x+'px';el.style.top=y+'px';el.classList.add('vis');el.classList.toggle('on',S.labHover===L.id);}
+ if(on){const vs=LT.filter(t=>t.el.classList.contains('vis')).map(t=>({el:t.el,r:t.el.getBoundingClientRect()})).sort((a,b)=>a.r.top-b.r.top);
+  for(let i=1;i<vs.length;i++){const a=vs[i-1].r,b=vs[i].r;if(a.left<b.right+6&&b.left<a.right+6&&a.top<b.bottom+6&&b.top<a.bottom+6){const dy=a.bottom-b.top+8;vs[i].el.style.top=(parseFloat(vs[i].el.style.top)+dy)+'px';}}}}
 /* ================= laço ================= */
 export let last=performance.now(),pickT=0;export const blue=new THREE.Color(0x2f8cff);
 export function focusedKey(){const top=S.stack[S.stack.length-1];if(top&&(top.t==='p'||top.t==='o'||top.t==='i'))return top.f.d.id+'/'+top.p?.id;if(S.carry&&S.carry.stage==='confirm')return S.carry.target.f.d.id+'/'+S.carry.target.p.id;return null;}
-export function loop(now){const dt=now-last;last=now;runTweens(now);
+export function loop(now){const dt=Math.min(100,now-last);last=now;runTweens(now);
+ if(parado(now)&&!tweens.size){requestAnimationFrame(loop);return;}
  if(needPick&&ptr.in&&!down&&!drag&&now-pickT>40){needPick=false;pickT=now;hoverTick();}
  controls.enableRotate=!S.oc;controls.enablePan=viewMode()==='lab';
- {const want=(S.stack.length||S.oc)?(mob()?[0,app.clientHeight*.24]:[220,0]):[0,0];S.vo=S.vo||[0,0];const kk=Math.min(1,dt*.008);S.vo[0]+=(want[0]-S.vo[0])*kk;S.vo[1]+=(want[1]-S.vo[1])*kk;
+ {const want=(S.stack.length||S.oc)?(mob()?[0,S.stack.length?(S.sheetH||app.clientHeight*.56)/2:app.clientHeight*.24]:[220,0]):[0,0];S.vo=S.vo||[0,0];const kk=Math.min(1,dt*.008);S.vo[0]+=(want[0]-S.vo[0])*kk;S.vo[1]+=(want[1]-S.vo[1])*kk;
   const W=app.clientWidth,Hh=app.clientHeight;if(Math.abs(S.vo[0])>.5||Math.abs(S.vo[1])>.5)camera.setViewOffset(W,Hh,S.vo[0],S.vo[1],W,Hh);else if(camera.view&&camera.view.enabled)camera.clearViewOffset();}
- controls.update();roomTick(dt);updateCut();
+ const camMoveu=controls.update();if(camMoveu||tweens.size||S.carry||S.oc||S.loc||Math.abs(S.vo[1]-(want_y()))>1)wake(900);
+ roomTick(dt);updateCut();
  const pulse=.5+.5*Math.sin(now*.005);const fk=focusedKey();const hp=S.hoverPart||(S.carry&&S.carry.hover);
  for(const f of F){f.cut+=((f.cutT||0)-f.cut)*Math.min(1,dt*.012);f.g.scale.y=Math.max(.04,1-.96*f.cut);
   for(const [pid,pt] of Object.entries(f.parts)){const on=hp&&hp.f===f&&hp.pid===pid?1:(S.carry&&S.carry.stage==='confirm'&&S.carry.target.f===f&&S.carry.target.p.id===pid?.6:0);
-   pt.hl+=(on-pt.hl)*Math.min(1,dt*.015);pt.halo.visible=pt.hl>.02;pt.halo.material.opacity=.13*pt.hl;if(pt.obj)pt.obj.position.z=Math.max(pt.open*.36,pt.hl*.06);if(pt.slide)pt.slide.o.position.x=pt.slide.dx*Math.max(pt.open,pt.hl*.08);
-   if(pt.board&&pt.board.material.emissive)pt.board.material.emissive.copy(blue).multiplyScalar(.22*pt.hl);}
+   pt.hl+=(on-pt.hl)*Math.min(1,dt*.015);pt.mark.visible=pt.hl>.02;pt.mark.material.opacity=.26*pt.hl;pt.mark.userData.line.material.opacity=pt.hl;if(pt.obj)pt.obj.position.z=Math.max(pt.open*.36,pt.hl*.1);if(pt.slide)pt.slide.o.position.x=pt.slide.dx*Math.max(pt.open,pt.hl*.92);}
+  if(f.doors){const dp=pid=>pid&&(f.d.doorParts?f.d.doorParts.includes(pid):/^P/.test(pid));const c=S.carry;
+   const quer=(S.stack[0]&&S.stack[0].f===f)||(S.vist&&S.vist.route[S.vist.i]===f)||(S.loc&&S.loc.f===f&&dp(S.loc.pid))||(c&&c.stage==='confirm'&&c.target.f===f&&dp(c.target.p.id))||(hp&&hp.f===f&&dp(hp.pid))?1:0;
+   f.doors.open+=(quer-f.doors.open)*Math.min(1,dt*.008);f.doors.l.rotation.y=-f.doors.open*1.9;f.doors.r.rotation.y=f.doors.open*1.9;}
   const alOn=S.vist||(S.stack[0]&&S.stack[0].f===f);
-  for(const m of f.meshes){const mt=m.material;if(!mt.emissive||Object.values(f.parts).some(pt=>pt.board===m))continue;mt.emissive.setRGB(0,0,0);if(f.v.hover)mt.emissive.setRGB(.05*f.v.hover,.1*f.v.hover,.16*f.v.hover);if(m.userData.alert&&alOn)mt.emissive.setRGB(.55*pulse,.36*pulse,0);}
+  for(const m of f.meshes){const mt=m.material;if(!mt.emissive||Object.values(f.parts).some(pt=>pt.board===m))continue;mt.emissive.setRGB(0,0,0);if(f.v.hover&&!post)mt.emissive.setRGB(.05*f.v.hover,.1*f.v.hover,.16*f.v.hover);if(m.userData.alert&&alOn)mt.emissive.setRGB(.55*pulse,.36*pulse,0);}
   for(const s of f.sprites){if(s.parent.userData.num===s)s.visible=fk===f.d.id+'/'+s.userData.part;}
   f.ringO+=((S.carry&&S.carry.stage==='part'&&(!S.lab||f.d.lab===S.lab)&&f.d.partes.some(p=>!p.cheia)?(S.carry.hover&&S.carry.hover.f===f?1:.4):0)-f.ringO)*.2;f.ring.material.opacity=f.ringO;f.ring.visible=f.ringO>.01;f.ring.rotation.y=now*.0003;}
  if(S.carry&&S.carry.ghost&&S.carry.ghost.visible){const g=S.carry.ghost;const t=ghostTarget();if(t)g.position.lerp(t.add(new THREE.Vector3(0,.03*Math.sin(now*.004),0)),Math.min(1,dt*.012));}
+ for(const id in LABGLOW){const g=LABGLOW[id];const t=(viewMode()==='over'&&!S.edit&&S.labHover===id)?1:0;g.a+=(t-g.a)*Math.min(1,dt*.012);g.frame.visible=g.fill.visible=g.a>.01;g.frame.material.opacity=.95*g.a;g.fill.material.opacity=.07*g.a;}
  updateShow(now);
  const gh=ghostPre(dt);
  if(post){const sel=[];const top=S.stack[S.stack.length-1];
-  if(hp)sel.push(hp.f.parts[hp.pid].halo);
-  else if(S.carry&&S.carry.stage==='confirm'){const t=S.carry.target;const og=(S.carry.hoverOrg||t.org)&&t.f.parts[t.p.id].orgG.find(g=>g.userData.org===(S.carry.hoverOrg||t.org).id);sel.push(og||t.f.parts[t.p.id].halo);}
+  const peca=pp=>pp.obj||(pp.slide&&pp.slide.o)||pp.board||pp.halo;
+  if(hp)sel.push(peca(hp.f.parts[hp.pid]));
+  else if(S.carry&&S.carry.stage==='confirm'){const t=S.carry.target;const og=(S.carry.hoverOrg||t.org)&&t.f.parts[t.p.id].orgG.find(g=>g.userData.org===(S.carry.hoverOrg||t.org).id);sel.push(og||peca(t.f.parts[t.p.id]));}
   else if(top&&top.t==='o'){const g=top.f.parts[top.p.id].orgG?.find(x=>x.userData.org===top.o.id);g&&sel.push(g);}
   else if(S.sel&&!S.stack.length&&!S.carry)sel.push(S.sel.g);
+  else if(S.hover&&!S.stack.length&&!S.carry&&!S.edit)sel.push(S.hover.g);
   post.outline.selectedObjects=sel;
   const focused=S.stack.length>0||!!S.vist||!!S.oc||(S.carry&&S.carry.stage==='confirm');S.focusAmt+=((focused?1:0)-S.focusAmt)*.08;
   post.bokeh.enabled=S.focusAmt>.02&&!S.edit;post.bokeh.uniforms.focus.value=S.oc?1.5:camera.position.distanceTo(controls.target);post.bokeh.uniforms.aperture.value=(S.oc?.012:.004)*S.focusAmt;post.bokeh.uniforms.maxblur.value=.009;post.c.render();}
  else renderer.render(scene,camera);
  ghostPost(gh);
  placeOverlays();labTags();requestAnimationFrame(loop);}
-requestAnimationFrame(loop);
+export function want_y(){return (S.stack.length||S.oc)&&mob()?(S.stack.length?(S.sheetH||app.clientHeight*.56)/2:app.clientHeight*.24):0;}
+/* parado: só conta o tempo e espera; o alerta pulsante do móvel aberto continua no modo completo */
+export function parado(now){return now>RENDER.ate&&!(S.stack.length&&!LITE)&&!S.vist;}
+wake(4000);requestAnimationFrame(loop);
 
 setRole('mem');
 if(location.hash.includes('dbg')){window.__S=S;window.__post=()=>post;window.__scene=scene;window.__cam=camera;window.__ray=ray;window.__F=F;window.__dbg={openStack,byId,pushCard,startCarry,locE,openPalette,localizar,startVist,select,applyStyle,openOrgCreator,openItemCreator,chooseTarget,commitCarry,focusLab,setHoverPart,walk,openCompras,setRole};}
 
+
+/* o foco num campo perto da borda não pode rolar a tela inteira */
+app.addEventListener('scroll',()=>{app.scrollTop=0;app.scrollLeft=0;});

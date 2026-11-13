@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { LIVE } from '../config.js';
 
 /* ================= dados ================= */
 export const CL={ferr:{n:'Ferramenta manual',i:'wrench',c:'#E07A1F',m:'unidades'},elet:{n:'Ferramenta elétrica',i:'bolt',c:'#D9A400',m:'unidades'},eletro:{n:'Eletrônica',i:'chip',c:'#1E9E6A',m:'contavel'},
@@ -33,7 +34,8 @@ export const ITEMS={
  allen:{nome:'Jogo de chaves Allen',cl:'ferr',spec:{'Medida':'1,5–10 mm'}},
  lima:{nome:'Lima chata',cl:'ferr'},
  brocas:{nome:'Kit de brocas HSS',cl:'ferr',modo:'conjunto',desc:'Maleta com brocas de 1 a 6 mm.'},
- estilete:{nome:'Estilete profissional',cl:'ferr',spec:{'Medida':'Lâmina 18 mm'}},
+ estilete:{nome:'Estilete profissional',cl:'ferr',spec:{'Medida':'Lâmina 18 mm'},ident:{nome:'Cor',tipo:'cor',ops:[{n:'Amarelo',c:'#E0B12E'},{n:'Vermelho',c:'#C8553D'}]}},
+ fenda:{nome:'Chave de fenda',cl:'ferr',ident:{nome:'Tamanho',tipo:'texto',ops:[{n:'Pequena'},{n:'Média'},{n:'Grande'}]}},
  tesoura:{nome:'Tesoura de chapa',cl:'ferr'},
  laminas:{nome:'Lâminas de estilete',cl:'ferr',modo:'contavel',un:'un.',min:10,spec:{'Medida':'18 mm'}},
  epoxi:{nome:'Cola epóxi 24 h',cl:'quim',un:'tubos',min:2,spec:{'Validade':'03/2027'}},
@@ -54,9 +56,13 @@ export const ITEMS={
  trofeu:{nome:'Troféu',cl:'div',modo:'unidades',desc:'Conquistas da equipe.'}};
 for(const [k,v] of Object.entries(ITEMS)){v.id=k;v.modo=v.modo||CL[v.cl].m;v.un=v.un||(v.modo==='unidades'?'un.':'un.');if(v.min==null)v.min=0;v.obs=v.obs||'';v.spec=v.spec||{};}
 export let eid=0,oid=0;
-export const U=(n,estado='boa',emp=null)=>({n,estado,emp});
-export const E=(ref,o={})=>({id:'x'+(++eid),ref,nf:false,t:NOW-Math.random()*20*DAY,...o});
-export const O=(tipo,cor,tam,o={})=>({id:'o'+(++oid),tipo,cor,tam,nome:'',etq:null,itens:[],...o});
+/* ids únicos entre aparelhos: tempo + acaso */
+export const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+export const U=(n,estado='boa',emp=null,v=null)=>({id:'U'+uid(),n,estado,emp,v});
+/* texto digitado ou lido de fora nunca carrega marcação */
+export const clean=s=>String(s??'').replace(/[<>]/g,'').replace(/"/g,'”').trim();
+export const E=(ref,o={})=>({id:'E'+uid(),ref,nf:false,t:NOW-Math.random()*20*DAY,...o});
+export const O=(tipo,cor,tam,o={})=>({id:'O'+uid(),tipo,cor,tam,nome:'',etq:null,itens:[],...o});
 export const Pt=(id,o={})=>({id,nomeP:'',etq:null,cheia:false,orgs:[],itens:[],...o});
 export const LABS=[{id:'man',nome:'Laboratório de Manufatura',x0:-3.6,x1:3.6,c:new THREE.Vector3(-.2,.2,0),d:19},{id:'ele',nome:'Laboratório de Eletrônica',x0:3.6,x1:6.4,c:new THREE.Vector3(5.0,.2,.2),d:13}];
 /* móveis do Lab 01 real (posições no mundo = maquete + OFF) e do Lab Drone/Eletrônica */
@@ -86,7 +92,7 @@ export const M=[
 {id:'lixo',lab:'man',nome:'Área do lixo',cod:'24',tipo:'lugar',deco:'lixo',W:.67,D:1.3,pos:[-3.265,.15,.8],rot:0,real:'#b07a2a',etq:null,partes:[Pt('L',{nomeP:'Sucata e descarte'})]},
 {id:'gazul',lab:'man',nome:'Gaveteiro azul',cod:'16',tipo:'gaveteiro',pos:[3.35,0,-.45],rot:-Math.PI/2,real:'#1f4c96',etq:'e1',partes:[
  Pt('A',{nomeP:'Top hat'}),...CARD.map((c,i)=>Pt('G'+(i+1),{etq:'g'+(i+1),etqNome:true,
-  ...(i===0?{itens:[E('lima',{units:[U(1),U(2),U(3,'quebrada')]})]}:i===1?{orgs:[O('cesto','#f2f2ef','G',{nome:'Bandeja de corte',itens:[E('estilete',{units:[U(1),U(2,'boa',{para:'Marina',tipo:'equipe',desde:NOW-6*DAY}),U(3,'desgastada')]}),E('tesoura',{units:[U(1),U(2)]})]})],itens:[E('laminas',{qtd:8})]}:i===2?{itens:[E('allen',{units:[U(1),U(2,'desgastada')]})]}:i===7?{orgs:[O('saco','#D2483F','M',{nome:'Saco de EPIs',itens:[E('luva',{qtd:8})]})]}:{})}))]},
+  ...(i===0?{itens:[E('lima',{units:[U(1),U(2),U(3,'quebrada')]})]}:i===1?{orgs:[O('cesto','#f2f2ef','G',{nome:'Bandeja de corte',itens:[E('estilete',{units:[U(1),U(2,'boa',{para:'Marina',tipo:'equipe',desde:NOW-6*DAY}),U(3,'desgastada')]}),E('tesoura',{units:[U(1),U(2)]})]})],itens:[E('laminas',{qtd:8})]}:i===2?{itens:[E('allen',{units:[U(1),U(2,'desgastada')]}),E('fenda',{units:[U(1,'boa',null,'Pequena'),U(2,'boa',null,'Pequena'),U(3,'boa',null,'Média'),U(4,'desgastada',null,'Grande')]})]}:i===7?{orgs:[O('saco','#D2483F','M',{nome:'Saco de EPIs',itens:[E('luva',{qtd:8})]})]}:{})}))]},
 {id:'a9',lab:'man',nome:'Armário 9',cod:'15',tipo:'armario',pos:[3.35,0,.2],rot:-Math.PI/2,real:'#eef0ed',etq:null,rot2:['PARAFUSOS',''],partes:[
  Pt('A',{nomeP:'Em cima'}),Pt('P1',{nomeP:'Prateleira de cima',itens:[E('porcas',{nivel:1,tipos:[{n:'M3'},{n:'M3 autotravante',aus:true},{n:'M4'}]})]}),Pt('P2',{nomeP:'Prateleira do meio'}),Pt('P3',{nomeP:'Prateleira de baixo'})]},
 {id:'s09',lab:'man',nome:'Armário suspenso 09',cod:'09',tipo:'suspenso',num:'09',rotulo:'CHAVES',yb:1.36,pos:[3.375,0,-.1],rot:-Math.PI/2,real:'#d9dcdb',etq:null,partes:[Pt('PE',{nomeP:'Porta esquerda'}),Pt('PD',{nomeP:'Porta direita'})]},
@@ -100,8 +106,24 @@ export const M=[
  Pt('A'),Pt('N1',{orgs:[O('ferramentas','#5f6468','M',{nome:'Caixa de baterias',itens:[E('lipo',{units:[U(1),U(2),U(3,'boa',{para:'Equipe Uai!rbus',tipo:'externa',desde:NOW-41*DAY}),U(4)]})]})]}),Pt('N2')]}];
 export const SEM={id:'sem',itens:[E('dupla',{qtd:3,t:NOW-2*DAY})]};
 export const ETQ=[{id:'e1',t:'GAVETEIRO AZUL'},{id:'e3',t:'MALETA CAMPO'},{id:'e4',t:'ARMÁRIO 1'},{id:'e5',t:'CAIXA 07'},{id:'e6',t:'BANCADA 2'},...CARD.map((c,i)=>({id:'g'+(i+1),t:c}))];
-export const LOG=[];export const log=(t,ref)=>{LOG.unshift({h:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),t,ref});};
-log('Protótipo aberto');
+for(const m of M)for(const p of m.partes)for(const e of [...p.itens,...p.orgs.flatMap(o=>o.itens)])if(e.ref==='estilete')e.units.forEach(u=>u.v=u.n<3?'Amarelo':'Vermelho');
+export const identOp=(it,v)=>it.ident&&v?it.ident.ops.find(o=>o.n===v):null;
+export const RECADO={linhas:['Reunião quinta 18h','Não deixar a serra ligada']};
+/* ---- dados de demonstração guardados no navegador (até a planilha entrar, na etapa 2) ---- */
+export const STORE='aerorio-inventario-demo-v2';export let saveT=0;
+export function snapshot(){return {v:2,eid,oid,ITEMS,SEM:SEM.itens,ETQ,RECADO:RECADO.linhas,M:M.map(m=>({id:m.id,pos:m.pos,rot:m.rot,etq:m.etq,partes:m.partes}))};}
+/* com a planilha ligada, sync.js assume a gravação (HOOK.save) e recebe os resumos das ações (HOOK.resumo) */
+export const HOOK={save:null,resumo:[],live:false};
+export function save(){if(HOOK.save){HOOK.save();return;}clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE,JSON.stringify(snapshot(),(k,v)=>k[0]==='_'?undefined:v));}catch(e){}},400);}
+export function cleanDeep(o){for(const k in o){const v=o[k];if(typeof v==='string')o[k]=clean(v);else if(v&&typeof v==='object')cleanDeep(v);}return o;}
+export function restore(){let d=null;try{d=JSON.parse(localStorage.getItem(STORE)||'null');}catch(e){}if(!d||d.v!==2||!Array.isArray(d.M))return;cleanDeep(d);
+ const ids=m=>m.partes.map(p=>p.id).join();if(d.M.some(s=>{const m=M.find(x=>x.id===s.id);return !m||ids(m)!==ids(s);}))return; // estrutura mudou: fica a demonstração nova
+ eid=d.eid;oid=d.oid;for(const k of Object.keys(ITEMS))delete ITEMS[k];Object.assign(ITEMS,d.ITEMS);SEM.itens=d.SEM;ETQ.length=0;ETQ.push(...d.ETQ);RECADO.linhas=d.RECADO||RECADO.linhas;
+ for(const s of d.M){const m=M.find(x=>x.id===s.id);m.pos=s.pos;m.rot=s.rot;m.etq=s.etq;m.partes=s.partes;}}
+if(!LIVE)restore();
+export function resetDemo(){clearTimeout(saveT);try{localStorage.removeItem(STORE);}catch(e){}location.reload();}
+export const LOG=[];export const log=(t,ref)=>{LOG.unshift({h:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),t,ref});HOOK.resumo.push({t:String(t).replace(/<[^>]*>/g,''),ref});save();};
+export const COMPRADOS=[];
 export const BUY=[];
 
 /* --------- consultas --------- */

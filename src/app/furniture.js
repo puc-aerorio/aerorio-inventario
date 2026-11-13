@@ -9,8 +9,11 @@ import { applyStyleTo } from './style.js';
 /* ---------- móveis ---------- */
 
 export const part=(g,y,w,d,h,k,extra={})=>{const c=new THREE.Group();c.position.set(extra.x||0,y,extra.z||0);g.add(c);
- const halo=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({color:0x2f8cff,transparent:true,opacity:0,depthWrite:false}));halo.position.y=h/2;halo.visible=false;c.add(halo);
- return {content:c,w,d,h,k,open:0,hl:0,halo,...extra};};
+ /* halo: volume invisível, só para o ponteiro. mark: a superfície onde as coisas ficam, que acende no destaque. */
+ const halo=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));halo.position.y=h/2;halo.visible=false;c.add(halo);
+ const mark=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshBasicMaterial({color:0x2f8cff,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));mark.rotation.x=-Math.PI/2;mark.position.y=.005;mark.visible=false;mark.raycast=()=>{};mark.userData.noOverride=true;mark.renderOrder=3;c.add(mark);
+ const ml=new THREE.LineSegments(new THREE.EdgesGeometry(mark.geometry),new THREE.LineBasicMaterial({color:0x2f8cff,transparent:true,opacity:0}));ml.raycast=()=>{};mark.add(ml);mark.userData.line=ml;
+ return {content:c,w,d,h,k,open:0,hl:0,halo,mark,...extra};};
 export const BUILD={
  estante(f,r){const n=f.d.n||3,W=f.d.W||2.0,D=.42,sp=1.5/n,H=.12+n*sp+.06;const g=new THREE.Group();
   for(const sx of[-1,1])for(const sz of[-1,1])box(g,.04,H,.04,sx*(W/2-.02),H/2,sz*(D/2-.02),'#6b737b','clay',{m:.4,r:.4});
@@ -137,17 +140,21 @@ export function piece(parent,e,size){const g=new THREE.Group();parent.add(g);con
  const q=it.modo==='conjunto'?NIVEIS[e.nivel]:String(unitsOf(e));const ns=sprite(numTexture(q),size*1.1);ns.position.y=sp.position.y+size*.75;ns.visible=false;g.add(ns);g.userData.num=ns;
  if(it.modo==='contavel'&&e.qtd===0)g.userData.esg=true;
  const al=isAlert(e);g.traverse(x=>{x.userData.entry=e.id;x.userData.alert=al;});return g;}
-export function layout(parent,w,d,entries,orgs,size){const placed=[];let x=-w/2,z=-d/2,rowD=0;
- for(const o of orgs){let [ow,od]=SZ[o.tam];ow=Math.min(ow,w*.96);od=Math.min(od,d*.96);o._sz=[ow,od];
-  if(x+ow>w/2+1e-3){x=-w/2;z+=rowD+.02;rowD=0;}const g=buildOrg(o,parent);g.position.set(x+ow/2,0,z+od/2);x+=ow+.02;rowD=Math.max(rowD,od);placed.push(g);
-  const ig=g.userData.inner;const n=o.itens.length;if(n){const s=Math.min(size,Math.min(ow,od)*.5);gridPlace(ig,ow*.8,od*.7,o.itens,s);}}
- const z0=orgs.length?z+rowD+.03:-d/2;const remD=Math.max(.06,d/2-z0);
- if(entries.length){const g=new THREE.Group();parent.add(g);g.position.z=z0+remD/2;gridPlace(g,w*.92,remD,entries,size);}return placed;}
-export function gridPlace(parent,w,d,entries,size){const n=entries.length;const cols=Math.max(1,Math.min(n,Math.round(Math.sqrt(n*w/d))||1));const rows=Math.ceil(n/cols);const cw=w/cols,cd=d/rows;
- const s=Math.min(size,cw*.8,cd*1.1);entries.forEach((e,k)=>{const p=piece(parent,e,s);p.position.set(-w/2+cw*(k%cols+.5),0,-d/2+cd*(Math.floor(k/cols)+.5));});}
+/* Preenchimento: organizadores em fileiras, reduzidos por igual até caberem na área e na altura da parte; itens soltos na faixa que sobra, com peça limitada pela célula e pela altura. Nada atravessa prateleira nem lateral. */
+export function layout(parent,w,d,entries,orgs,size,hmax=9){const placed=[],gap=.02;
+ const fundo=s=>{let x=0,z=0,row=0;for(const o of orgs){const [ow,od]=SZ[o.tam];const a=Math.min(ow*s,w),b=od*a/ow;if(x>0&&x+a>w+1e-3){x=0;z+=row+gap;row=0;}x+=a+gap;row=Math.max(row,b);}return z+row;};
+ let s=1;if(orgs.length){const hs=Math.max(...orgs.map(o=>OT[o.tipo].h[o.tam]));s=Math.min(1,hmax*.9/hs);const cabe=d*(entries.length?.68:1);while(s>.35&&fundo(s)>cabe)s-=.05;}
+ let x=-w/2,z=-d/2,rowD=0;
+ for(const o of orgs){const [ow,od]=SZ[o.tam];o._sz=[ow,od];const a=Math.min(ow*s,w),sc=a/ow,b=od*sc;
+  if(x>-w/2&&x+a>w/2+1e-3){x=-w/2;z+=rowD+gap;rowD=0;}const g=buildOrg(o,parent);g.scale.setScalar(sc);g.userData.sc=sc;g.position.set(x+a/2,0,z+b/2);x+=a+gap;rowD=Math.max(rowD,b);placed.push(g);
+  if(o.itens.length)gridPlace(g.userData.inner,ow*.8,od*.7,o.itens,Math.min(size/sc,Math.min(ow,od)*.5));}
+ const z0=orgs.length?Math.min(d/2-.07,z+rowD+.03):-d/2;const remD=Math.max(.07,d/2-z0);
+ if(entries.length){const g=new THREE.Group();parent.add(g);g.position.z=z0+remD/2;gridPlace(g,w*.92,remD,entries,size,hmax);}return placed;}
+export function gridPlace(parent,w,d,entries,size,hmax=9){const n=entries.length;const cols=Math.max(1,Math.min(n,Math.round(Math.sqrt(n*w/d))||1));const rows=Math.ceil(n/cols);const cw=w/cols,cd=d/rows;
+ const s=Math.min(size,cw*.8,cd*1.1,hmax/1.6);entries.forEach((e,k)=>{const p=piece(parent,e,s);p.position.set(-w/2+cw*(k%cols+.5),0,-d/2+cd*(Math.floor(k/cols)+.5));});}
 export function buildContents(f,pid){const pt=f.parts[pid],p=f.d.partes.find(x=>x.id===pid);const c=pt.content;
- for(const ch of [...c.children]){if(ch===pt.halo)continue;c.remove(ch);ch.traverse(x=>{if(x.isMesh)x.geometry.dispose();});}
- const size=pt.k==='drawer'?.085:.13;pt.orgG=layout(c,pt.w,pt.d,p.itens,p.orgs,size);
+ for(const ch of [...c.children]){if(ch===pt.halo||ch===pt.mark)continue;c.remove(ch);ch.traverse(x=>{if(x.isMesh)x.geometry.dispose();});}
+ const size=pt.k==='drawer'?.085:.13;pt.orgG=layout(c,pt.w,pt.d,p.itens,p.orgs,size,(pt.k==='shelf'||pt.k==='under')?pt.h:9);
  c.traverse(x=>{if(x.isMesh||x.isSprite){x.userData.f=f;x.userData.part=pid;x.userData.lab=f.d.lab;}});applyStyleTo(c);collect(f);}
 export function collect(f){f.meshes=[];f.sprites=[];f.g.traverse(o=>{if(o.isMesh&&o.userData.base){f.meshes.push(o);o.userData.f=f;o.userData.lab=f.d.lab;}if(o.isSprite)f.sprites.push(o);});
  pick.length=0;F.forEach(x=>x.meshes&&pick.push(...x.meshes));}

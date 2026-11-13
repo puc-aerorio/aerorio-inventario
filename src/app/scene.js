@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { app } from './state.js';
+import { TOQUE, app } from './state.js';
 import { P } from './icons.js';
 import { CL, LABS } from './data.js';
 
 /* ================= cena ================= */
-export const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(2,devicePixelRatio));
+export const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(TOQUE?1.5:2,devicePixelRatio));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 renderer.domElement.className='main';app.prepend(renderer.domElement);
 export const scene=new THREE.Scene();
@@ -16,7 +16,7 @@ camera.position.copy(HOME.t).addScaledVector(DIR,HOME.d);
 export const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(HOME.t);controls.enableDamping=true;controls.dampingFactor=.12;
 controls.minDistance=.9;controls.maxDistance=60;controls.minPolarAngle=.35;controls.maxPolarAngle=1.25;controls.update();
 export const hemi=new THREE.HemisphereLight(0xffffff,0xc9d1d9,1);scene.add(hemi);
-export const sun=new THREE.DirectionalLight(0xfff6ea,1.6);sun.position.set(7,12,7);sun.target.position.set(2.5,0,0);scene.add(sun.target);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+export const sun=new THREE.DirectionalLight(0xfff6ea,1.6);sun.position.set(7,12,7);sun.target.position.set(2.5,0,0);scene.add(sun.target);sun.castShadow=true;sun.shadow.mapSize.set(TOQUE?1024:2048,TOQUE?1024:2048);
 Object.assign(sun.shadow.camera,{left:-10,right:10,top:9,bottom:-9,near:1,far:45});sun.shadow.bias=-.0005;sun.shadow.radius=6;scene.add(sun);
 export function bgTex(c1,c2){const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,c1);g.addColorStop(1,c2);x.fillStyle=g;x.fillRect(0,0,2,256);
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}

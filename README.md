@@ -8,17 +8,29 @@ Base: protótipo v4.1 do chat de design. Plano e decisões: `claude/plano_invent
 
 ```
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:5173 — sem configuração, abre a demonstração
+npm test           # gera apps-script/Codigo.gs e testa o servidor numa planilha simulada
 npm run build      # gera dist/ (o que vai para o GitHub Pages)
 ```
 
-`#lite` na URL desliga o pós-processamento. `#dbg` expõe o estado em `window.__S` e `window.__dbg`.
+`#demo` na URL força a demonstração mesmo com a planilha ligada. `#lite` desliga o pós-processamento; `#full` liga no celular. `#dbg` expõe o estado para testes.
+
+Pôr no ar com a planilha: **SETUP.md**.
+
+## Como os dados andam
+
+O site guarda uma cópia da planilha no aparelho e nunca espera por ela. Cada ação muda a tela na hora; `sync.js` compara o antes e o depois, transforma a diferença em operações (quantidade vai como soma) e põe numa fila gravada no aparelho. A fila sai em lote para o Apps Script, que confere permissão, grava nas abas e devolve o que os outros mudaram. Sem internet, a fila espera.
+
+- Esquema das abas, permissões e a regra que aplica uma operação: `src/data/schema.js` (o mesmo arquivo vai para o servidor).
+- Servidor: `server/main.js` → `npm run gs` → `apps-script/Codigo.gs`.
+- Ligação entre o modelo 3D e a planilha (ids dos móveis, endereços da v2, classes): `src/data/mapa.js`.
+- Testes: `tests/server.test.mjs` (servidor) e `tests/e2e.py` (site + planilha falsa, dois aparelhos; precisa de Playwright e de `npm run planilha-falsa`).
 
 ## Estado
 
-Etapa 1 em andamento. Feito: porte fiel do protótipo em módulos, Three.js e fontes empacotados, tela cheia, lab não selecionado (apagado por material no modo leve e no celular, desfocado em passe separado no modo completo), rotação com um dedo no celular. Os dados ainda são os de demonstração e ficam em memória.
+Etapa 1 concluída: porte do protótipo, rodada de arestas, celular, planilha, login e papéis. Falta só a configuração do SETUP.md para ir ao ar.
 
-Falta na etapa 1: as correções listadas no plano (oclusão por peça, colisão de sobreposições, busca de ângulo, escape de texto, edição de posição com nível do piso, desempenho no celular, cor do organizador, recado do quadro) e guardar os dados de demonstração no navegador.
+Próximas etapas, nesta ordem: acabamento de marca; ferramentas de Admin (triagem do LEGADO, vistoria por prazo, validade e manutenção, exportação); funcionalidades novas (QR, viagem, fotos).
 
 ## Organização
 
@@ -38,5 +50,7 @@ Falta na etapa 1: as correções listadas no plano (oclusão por peça, colisão
 | `furniture.js` | móveis, máquinas, organizadores e peças de item |
 | `camera.js` | movimentos de câmera e abertura de gavetas e portas |
 | `ui.js` | telas, ponteiro, sobreposições e laço de desenho |
+| `mobile.js` | folha de cards arrastável, menu do celular, desenho sob demanda |
+| `sync.js` | banco no aparelho, fila de envio, login, Pessoas |
 
 `ui.js` ainda é um módulo só, porque as telas se chamam entre si. Ele será dividido conforme as correções passarem por cada parte.

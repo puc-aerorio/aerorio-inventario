@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { F, FADE, S, ray } from './state.js';
+import { RECADO } from './data.js';
 import { box, camera, controls, labG, lamps, mesh, scene } from './scene.js';
 
 /* ================= Lab 01 (Manufatura) e Lab Drone (Eletrônica): geometria da sala real =================
@@ -26,11 +27,6 @@ export function texPlane(g,w,h,tex,x,y,z,ry=0){const m=mesh(g,new THREE.PlaneGeo
 export const etqTex=t=>textTex(t,128,64,{bg:'#f7f5ee',fg:'#222',fs:30,w:700});
 export function tomadaM(g,x,y,z,ry=0){const t=new THREE.Group();t.position.set(x,y,z);t.rotation.y=ry;g.add(t);X(t,-.2,.2,-.05,.05,0,.05,'#c3c8cb','color',{m:.55,r:.35});
  for(let i=0;i<8;i++){const c=mesh(t,new THREE.CylinderGeometry(.012,.012,.01,12),'#222','color',-.165+i*.047,0,.05);c.rotation.x=Math.PI/2;}X(t,-.6,-.2,-.015,.015,0,.03,'#1d2226','color');return t;}
-/* tira faces voltadas para cima: de cima, a estrutura aparece em corte */
-export function semTopo(geo){const g=geo.index?geo.toNonIndexed():geo;const p=g.attributes.position,keep=[];const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),n=new THREE.Vector3(),t=new THREE.Vector3();
- for(let i=0;i<p.count;i+=3){a.fromBufferAttribute(p,i);b.fromBufferAttribute(p,i+1);c.fromBufferAttribute(p,i+2);n.subVectors(c,b).cross(t.subVectors(a,b)).normalize();if(n.y<.5)keep.push(i);}
- const out=new THREE.BufferGeometry();for(const k of['position','normal','uv']){const at=g.attributes[k];if(!at)continue;const arr=new Float32Array(keep.length*3*at.itemSize);keep.forEach((i,j)=>{for(let v=0;v<3;v++)for(let q=0;q<at.itemSize;q++)arr[(j*3+v)*at.itemSize+q]=at.array[(i+v)*at.itemSize+q];});out.setAttribute(k,new THREE.BufferAttribute(arr,at.itemSize));}
- out.computeVertexNormals();return out;}
 /* lajota 33 cm com rejunte escuro */
 export const TILE=canvasTex(256,256,(x)=>{x.fillStyle='#f2f3f1';x.fillRect(0,0,256,256);for(let i=0;i<300;i++){x.fillStyle=`rgba(120,130,135,${Math.random()*.04})`;x.fillRect(Math.random()*256,Math.random()*256,2+Math.random()*6,2+Math.random()*6);}x.fillStyle='#8f969b';x.fillRect(0,0,256,5);x.fillRect(0,0,5,256);});
 TILE.wrapS=TILE.wrapT=THREE.RepeatWrapping;
@@ -82,8 +78,8 @@ export function construirSalas(){
   X(g,4.0,4.06,0,2.3,6.94,7.06,'#1c2125','color');X(g,4.84,4.9,0,2.3,6.94,7.06,'#1c2125','color');X(g,4.0,4.9,2.25,LH,6.94,7.06,'#efebe5','wall');X(g,4.06,4.84,0,2.22,6.98,7.02,'#cfd4d6','clay');X(g,4.9,5.32,0,LH,6.94,7.06,'#efebe5','wall');
   X(g,2.025,3.825,2.33,2.41,6.88,6.94,'#ececea','paint');mesh(g,new THREE.CylinderGeometry(.01,.01,.22,8),'#222','color',2.925,2.2,6.9);}
  /* parede do quadro (alinhada à face externa da parede do fundo) */
- {const o=occ(sharedG,'wall',{n:[1,0],shared:1});const g=o.g;X(g,5.2,5.32,0,LH,4.15,7.0,'#efebe5','wall');const t=textTex(['','Reunião quinta 18h','Não deixar a serra ligada'],600,320,{bg:'#fbfbfa',fg:'#1f4c96',fs:34,w:500});
-  X(g,5.13,5.2,.95,2.12,4.45,6.75,'#b9bec1','color',{m:.5});texPlane(g,2.24,1.13,t,5.128,1.535,5.6,-Math.PI/2);X(g,5.07,5.2,.92,.95,4.6,6.6,'#b9bec1','color',{m:.5});}
+ {const o=occ(sharedG,'wall',{n:[1,0],shared:1});const g=o.g;X(g,5.2,5.32,0,LH,4.15,7.0,'#efebe5','wall');const t=textTex(['',...RECADO.linhas],600,320,{bg:'#fbfbfa',fg:'#1f4c96',fs:34,w:500});
+  X(g,5.13,5.2,.95,2.12,4.45,6.75,'#b9bec1','color',{m:.5});ROOM.quadro=texPlane(g,2.24,1.13,t,5.128,1.535,5.6,-Math.PI/2);X(g,5.07,5.2,.92,.95,4.6,6.6,'#b9bec1','color',{m:.5});}
  {const o=occ(sharedG,'wall',{n:[0,1],shared:1});X(o.g,5.2,7.32,0,LH,4.15,4.27,'#efebe5','wall');}
  {const o=occ(sharedG,'wall',{n:[1,0],shared:1});X(o.g,7.2,7.32,0,LF,0,4.27,'#efebe5','wall');}
  /* fachada contínua: sai quando a câmera olha de fora */
@@ -92,8 +88,7 @@ export function construirSalas(){
  /* estrutura que não sai: parede curva da direita (divide o fundo do recuo) e a faixa inclinada; translúcidas no zoom quando atrapalham */
  {const o=occ(man,'keep');const es=o.g;
   const m1=mesh(es,ext(arco(1.5,3.7),4.85,5.2),'#efebe5','wall');
-  const sb=new THREE.Shape();sb.moveTo(0,LF);sb.lineTo(.6,LF);sb.lineTo(3.0,LH);sb.lineTo(0,LH);sb.closePath();mesh(es,semTopo(ext(sb,.35,4.85)),'#efebe5','wall');
-  texPlane(es,.62,.46,canvasTex(310,230,(x)=>{x.fillStyle='#ece8de';x.fillRect(0,0,310,230);x.fillStyle='#2b3c66';x.font='700 22px Arial';x.fillText('F/A-18F',60,24);x.strokeStyle='#4a5a6a';x.lineWidth=2;x.beginPath();x.moveTo(40,170);x.lineTo(160,90);x.lineTo(280,120);x.lineTo(170,150);x.closePath();x.stroke();for(let i=0;i<40;i++){x.fillStyle='rgba(60,60,60,.35)';x.fillRect(8,40+i*4.5,40,2);}}),4.845,2.0,1.75,-Math.PI/2);}
+    texPlane(es,.62,.46,canvasTex(310,230,(x)=>{x.fillStyle='#ece8de';x.fillRect(0,0,310,230);x.fillStyle='#2b3c66';x.font='700 22px Arial';x.fillText('F/A-18F',60,24);x.strokeStyle='#4a5a6a';x.lineWidth=2;x.beginPath();x.moveTo(40,170);x.lineTo(160,90);x.lineTo(280,120);x.lineTo(170,150);x.closePath();x.stroke();for(let i=0;i<40;i++){x.fillStyle='rgba(60,60,60,.35)';x.fillRect(8,40+i*4.5,40,2);}}),4.845,2.0,1.75,-Math.PI/2);}
  /* colunas pretas */
  for(const [x,z] of[[.85,3.6],[.85,4.95],[.85,6.9],[5.255,2.855]]){const o=occ(man,'down',{link:x<1?oEsq:null});X(o.g,x-.055,x+.055,fyM(x,z),LH,z-.055,z+.055,'#1d2226','color',{r:.5,m:.3});}
  /* luminárias: translúcidas de dia, acesas no noturno */
@@ -126,21 +121,38 @@ export const occRay=new THREE.Ray(),tmpV=new THREE.Vector3(),hitV=new THREE.Vect
 export function alvosVista(mode){const t=[];if(mode==='zoom'){const fc=S.focusT||controls.target;t.push(fc.clone());const f=S.stack[0]?.f||S.loc?.f||(S.carry&&S.carry.target?.f);if(f){t.push(f.center.clone(),f.anchor.clone());}}
  else if(mode==='lab'){for(const f of F)if(f.d.lab===S.lab&&f.bb){const b=f.bb;t.push(f.center.clone(),f.anchor.clone());for(const x of[b.min.x,b.max.x])for(const z of[b.min.z,b.max.z])t.push(new THREE.Vector3(x,(b.min.y+b.max.y)/2,z));}}return t;}
 export function occTick(dt){const mode=viewMode();
- if(++occT%4===0){const v=new THREE.Vector2(camera.position.x-controls.target.x,camera.position.z-controls.target.z).normalize();const alvos=alvosVista(mode);const cam=camera.position;
+ /* Regras, da mais simples para a mais cara:
+    colunas, coifa e ar-condicionado só existem na visão geral;
+    parede sai quando a câmera está do lado de fora dela (com faixa morta, para não oscilar na fronteira);
+    no zoom, parede que ainda tapa o alvo também sai;
+    o que saiu só volta depois de meio segundo livre. */
+ if(++occT%4===0){const v=new THREE.Vector2(camera.position.x-controls.target.x,camera.position.z-controls.target.z).normalize();const cam=camera.position;const alvos=mode==='zoom'?alvosVista(mode):[];
+  const tapa=o=>{for(const t of alvos){if(o.box.containsPoint(t))continue;occRay.origin.copy(cam);occRay.direction.copy(tmpV.subVectors(t,cam).normalize());const h=occRay.intersectBox(o.box,hitV);if(h&&cam.distanceTo(hitV)<cam.distanceTo(t)-.12)return true;}return false;};
   for(const o of OCC){let b=false;
-   if(mode==='over'){if(o.mode==='wall'&&o.n)b=o.n.dot(v)>.2;}
-   else if(FADE===1&&S.lab&&o.lab!==S.lab&&!o.shared){b=o.mode==='wall'||o.mode==='down'||o.mode==='up';}
-   else if(o.lab===S.lab||o.shared||mode==='zoom'){if(o.mode==='keep'&&mode!=='zoom'){b=false;}else for(const t of alvos){if(o.box.containsPoint(t))continue;occRay.origin.copy(cam);occRay.direction.copy(tmpV.subVectors(t,cam).normalize());const h=occRay.intersectBox(o.box,hitV);if(h&&cam.distanceTo(hitV)<cam.distanceTo(t)-.12){b=true;break;}}}
-   o.blk=b;}
-  for(const o of OCC)if(o.link&&o.link.blk&&mode!=='over')o.blk=true;
-  OCC_SOLID.length=0;for(const o of OCC)if((o.mode==='wall'||o.mode==='down'||o.mode==='up'||o.mode==='keep')&&o.s>.6)OCC_SOLID.push(...o.meshes);}
- const faded=S.lab?(lab=>lab!==S.lab):(()=>false);const k=Math.min(1,dt*.01);
+   if(o.mode==='down'||o.mode==='up')b=mode!=='over';
+   else if(o.mode==='wall'){const d=o.n?o.n.dot(v):0;b=d>(o.blk?.3:.45);if(FADE===1&&S.lab&&o.lab!==S.lab&&!o.shared)b=true;else if(!b&&mode==='zoom')b=tapa(o);}
+   else if(o.mode==='keep')b=mode==='zoom'&&tapa(o);
+   if(b){o.blk=true;o.livre=0;}else if(o.blk&&++o.livre>=8)o.blk=false;}
+  OCC_SOLID.length=0;for(const o of OCC)if((o.mode==='wall'||o.mode==='keep')&&o.s>.6)OCC_SOLID.push(...o.meshes);}
+ const k=Math.min(1,dt*.01);
  for(const o of OCC){
   if(o.mode==='wall'||o.mode==='down'||o.mode==='up'){const t=o.blk?.04:1;o.s+=(t-o.s)*k;o.g.scale.y=Math.max(.03,o.s);o.g.visible=o.s>.05||o.mode==='wall';}
-  else{const t=o.mode==='keep'?(o.blk?.1:1):(o.blk?.06:(mode==='zoom'?.6:1));o.s+=(t-o.s)*k;const dim=faded(o.lab)?(FADE===1?.25:1):1;
+  else{const t=o.mode==='keep'?(o.blk?.1:1):(mode==='zoom'?.35:1);o.s+=(t-o.s)*k;const dim=(FADE===1&&S.lab&&o.lab!==S.lab)?.25:1;
    for(const m of o.meshes){const base=(S.style==='a'&&m.userData.opA!=null)?m.userData.opA:(m.userData.op??o.fadeOp);const op=(o.mode==='fade'?base:1)*o.s*dim;m.material.opacity=op;m.material.transparent=op<.999;m.material.depthWrite=op>.95;m.castShadow=false;}}}}
 export function roomTick(dt){occTick(dt);}
 /* não clicar através de paredes */
 export function atrasDeParede(dist){if(!OCC_SOLID.length)return false;const h=ray.intersectObjects(OCC_SOLID,false)[0];return h&&h.distance<dist-.02;}
 
 
+
+/* recado do quadro branco (Admin) */
+export function setRecado(linhas){const m=ROOM.quadro,tex=textTex(['',...linhas],600,320,{bg:'#fbfbfa',fg:'#1f4c96',fs:34,w:500});for(const mt of new Set([m.material,m.userData.std,m.userData.toon]))if(mt){mt.map=tex;mt.needsUpdate=true;}}
+/* planta de cada lab (coordenadas da maquete): limite para mover móveis e moldura de destaque na visão geral */
+export const PLANTA={man:[[0,0],[7.2,0],[7.2,4.15],[5.2,4.15],[5.2,7],[0,7]],ele:[[7.32,0],[10,0],[10,7],[5.32,7],[5.32,4.27],[7.32,4.27]]};
+export const PLANTA_R={man:[[0,5.2,0,7],[5.2,7.2,0,4.15]],ele:[[7.32,10,0,4.27],[5.32,10,4.27,7]]};
+export function inLab(lab,wx,wz,m=.25){const x=wx-OFF.x,z=wz-OFF.z;return PLANTA_R[lab].some(r=>x>=r[0]+m&&x<=r[1]-m&&z>=r[2]+m&&z<=r[3]-m);}
+export const LABGLOW={};
+for(const [lab,pts] of Object.entries(PLANTA)){const cx=pts.reduce((a,p)=>a+p[0],0)/pts.length,cz=pts.reduce((a,p)=>a+p[1],0)/pts.length;
+ const sh=new THREE.Shape(pts.map(([x,z])=>new THREE.Vector2(x+Math.sign(x-cx)*.22,-(z+Math.sign(z-cz)*.22))));sh.holes.push(new THREE.Path(pts.map(([x,z])=>new THREE.Vector2(x+Math.sign(x-cx)*.1,-(z+Math.sign(z-cz)*.1)))));
+ const mk=(geo,y)=>{geo.rotateX(-Math.PI/2);const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x2f8cff,transparent:true,opacity:0,depthWrite:false}));m.position.copy(OFF);m.position.y=y;m.raycast=()=>{};m.userData.noOverride=true;m.visible=false;m.renderOrder=4;scene.add(m);return m;};
+ LABGLOW[lab]={a:0,frame:mk(new THREE.ShapeGeometry(sh),-.16),fill:mk(new THREE.ShapeGeometry(new THREE.Shape(pts.map(([x,z])=>new THREE.Vector2(x,-z)))),.2)};}

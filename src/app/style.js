@@ -15,7 +15,7 @@ export function wash(c,st){const l=c.r*.3+c.g*.59+c.b*.11;c.r+=(l-c.r)*.8;c.g+=(
 export function matFor(o,st){const u=o.userData;const f1=FADE===1&&S.lab&&u.lab&&u.lab!==S.lab&&!u.shared;
  if(u.multi){for(const m of o.material){m.transparent=false;m.opacity=1;m.depthWrite=true;m.color.set(m.map?(st==='a'?'#7b8087':st==='c'?'#f3e3c2':'#ffffff'):(st==='a'?'#4a4f55':'#c4c9cc'));if(f1)wash(m.color,st);}o.castShadow=false;return;}
  const wantToon=st==='c'&&!u.op;
- if(wantToon&&!o.material.isMeshToonMaterial){u.std=u.std||o.material;u.toon=u.toon||new THREE.MeshToonMaterial({color:o.material.color.clone(),gradientMap:toonGrad});o.material=u.toon;}
+ if(wantToon&&!o.material.isMeshToonMaterial){u.std=u.std||o.material;u.toon=u.toon||new THREE.MeshToonMaterial({color:o.material.color.clone(),gradientMap:toonGrad,map:o.material.map||null,alphaMap:o.material.alphaMap||null,alphaTest:o.material.alphaTest||0,side:o.material.side});o.material=u.toon;}
  if(!wantToon&&o.material.isMeshToonMaterial)o.material=u.std;
  const r=u.role;tmpC.copy(u.base);
  if(r==='clay'){tmpC.lerp(CLAYB[st],st==='e'?1:.25);if(st==='a')tmpC.multiplyScalar(.8);}
