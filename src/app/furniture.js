@@ -5,6 +5,7 @@ import { shade } from './html.js';
 import { box, cyl, iconTexture, mesh, numTexture, scene, sprite } from './scene.js';
 import { X, canvasTex, etqTex, texPlane, textTex, tomadaM, trans } from './room.js';
 import { applyStyleTo } from './style.js';
+import { LIVE } from '../config.js';
 
 /* ---------- móveis ---------- */
 
@@ -99,9 +100,10 @@ Object.assign(BUILD,{
  lugar(f){const d=f.d,W=d.W,D=d.D,g=new THREE.Group();// lugar sem subdivisões: contorno tracejado + objetos típicos
   const pts=[[-W/2,-D/2],[W/2,-D/2],[W/2,D/2],[-W/2,D/2],[-W/2,-D/2]].map(([x,z])=>new THREE.Vector3(x,.012,z));const ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:0xb07a2a,dashSize:.08,gapSize:.05}));ln.computeLineDistances();ln.raycast=()=>{};g.add(ln);
   const fl=trans(mesh(g,new THREE.PlaneGeometry(W,D),'#b07a2a','paint',0,.01,0,{cast:false}),.1);fl.rotation.x=-Math.PI/2;
-  if(d.deco==='vao'){X(g,-.2,.07,0,.3,-.55,-.3,'#c49a62');X(g,-.18,.02,0,.5,-.2,0,'#888d90');}
-  if(d.deco==='materiais'){for(let i=0;i<5;i++){const m=X(g,-.25+i*.1,-.23+i*.1,0,1.2+i*.1,-1.0,.2,i%2?'#d6c09a':'#c8ad80');m.rotation.z=-.12;}for(let i=0;i<6;i++){const m=mesh(g,new THREE.CylinderGeometry(.012,.012,1.9,6),i%2?'#3a3a3a':'#c9a36a','color',-.3+i*.08,.95,.7+(i%3)*.06);m.rotation.z=.08;}}
-  if(d.deco==='lixo'){X(g,-.25,.25,0,.55,-.55,-.15,'#c49a62');mesh(g,new THREE.CylinderGeometry(.2,.2,.5,20),'#f2f2ef','clay',0,.25,.15);X(g,-.3,.3,0,.08,.25,.55,'#b98d55');}
+  /* objetos ilustrativos (tábuas, tubos, caixas) só na demonstração: com a planilha ligada, o 3D mostra só o que existe */
+  if(d.deco==='vao'&&!LIVE){X(g,-.2,.07,0,.3,-.55,-.3,'#c49a62');X(g,-.18,.02,0,.5,-.2,0,'#888d90');}
+  if(d.deco==='materiais'&&!LIVE){for(let i=0;i<5;i++){const m=X(g,-.25+i*.1,-.23+i*.1,0,1.2+i*.1,-1.0,.2,i%2?'#d6c09a':'#c8ad80');m.rotation.z=-.12;}for(let i=0;i<6;i++){const m=mesh(g,new THREE.CylinderGeometry(.012,.012,1.9,6),i%2?'#3a3a3a':'#c9a36a','color',-.3+i*.08,.95,.7+(i%3)*.06);m.rotation.z=.08;}}
+  if(d.deco==='lixo'){if(!LIVE)X(g,-.25,.25,0,.55,-.55,-.15,'#c49a62');mesh(g,new THREE.CylinderGeometry(.2,.2,.5,20),'#f2f2ef','clay',0,.25,.15);if(!LIVE)X(g,-.3,.3,0,.08,.25,.55,'#b98d55');}
   return {g,parts:{L:part(g,.012,W-.04,D-.04,.6,'top',{board:fl})}};}});
 
 /* organizadores 3D */

@@ -8,6 +8,8 @@ import { toast } from './html.js';
 import { setRecado } from './room.js';
 import { buildContents, measure } from './furniture.js';
 import { closeModal, modal, refreshBadges, refreshCards, setRole } from './ui.js';
+import { admClick, admListH } from './mobile.js';
+import { mob } from './state.js';
 
 /* ================= planilha: banco local, fila de envio e login =================
    O app nunca espera a planilha para responder. Cada ação muda o estado na hora; o que mudou vira uma lista de
@@ -399,10 +401,13 @@ export function contaPop() {
    <div class="sst" data-s="${estado}"><i></i>${situacao()}</div>
    <div class="row stl">${[['a', 'Noturno'], ['b', 'Claro'], ['c', 'Ilustrado']].map(([k, n]) => `<button data-st="${k}" class="${S.style === k ? 'on' : ''}"><span class="sw" data-v="${k}"></span>${n}</button>`).join('')}</div>
    ${S.role === 'admin' ? `<button class="it" data-ac="ppl">${IC.people}Pessoas${ST.pendentes ? `<b class="nb">${ST.pendentes}</b>` : ''}</button>` : ''}
+   ${S.role === 'admin' && mob() ? `<div class="tl">Ferramentas</div><div class="ilist">${admListH(['pplBtn'])}</div>` : ''}
+   <div class="sep"></div>
    <button class="it" data-ac="sync">${IC.sync}Atualizar agora</button>
    <button class="it" data-ac="out">${IC.out}Sair</button>`;
   p.onclick = ev => {
     const st = ev.target.closest('[data-st]'); if (st) { const sw = document.querySelector(`#styles .sw[data-v="${st.dataset.st}"]`); if (sw) sw.click(); contaPop(); return; }
+    if (admClick(ev)) { p.classList.remove('on'); return; }
     const a = ev.target.closest('[data-ac]'); if (!a) return;
     p.classList.remove('on');
     if (a.dataset.ac === 'ppl') abrePessoas();

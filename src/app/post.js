@@ -14,7 +14,7 @@ import { BGS, camera, labG, renderer, scene } from './scene.js';
 export const FSVS='varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}';
 export let post=null;
 export function setupPost(){const w=app.clientWidth,h=app.clientHeight;const c=new EffectComposer(renderer);c.addPass(new RenderPass(scene,camera));
- const gtao=new GTAOPass(scene,camera,w,h);gtao.updateGtaoMaterial({radius:.5,distanceExponent:1.2,thickness:1.2,scale:1});gtao.blendIntensity=.8;c.addPass(gtao);
+ const gtao=new GTAOPass(scene,camera,w,h);gtao.updateGtaoMaterial({radius:.5,distanceExponent:1.2,thickness:1.2,scale:1,samples:16,screenSpaceRadius:false});gtao.updatePdMaterial({lumaPhi:10,depthPhi:2,normalPhi:3,radius:6,rings:2,samples:16});/* mais amostras e denoise: some o listrado nas faces finas (fundo das bancadas) */gtao.blendIntensity=.8;c.addPass(gtao);
  const outline=new OutlinePass(new THREE.Vector2(w,h),scene,camera);Object.assign(outline,{edgeStrength:3.2,edgeGlow:.6,edgeThickness:1.6,pulsePeriod:0});outline.visibleEdgeColor.set('#2f8cff');outline.hiddenEdgeColor.set('#1f5fae');c.addPass(outline);
  const bokeh=new BokehPass(scene,camera,{focus:10,aperture:0,maxblur:.012});bokeh.enabled=false;c.addPass(bokeh);
  const bloom=new UnrealBloomPass(new THREE.Vector2(w,h),.42,.3,.9);c.addPass(bloom);c.addPass(new OutputPass());

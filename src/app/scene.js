@@ -13,11 +13,11 @@ export const camera=new THREE.PerspectiveCamera(26,1,.05,200);
 export const HOME={t:new THREE.Vector3(1.0,.2,.2),d:25};export const DIR=new THREE.Vector3(-.35,.95,1).normalize();
 export const asp=()=>app.clientWidth/app.clientHeight;export const fitD=d=>d*Math.pow(Math.max(1,1.55/asp()),.85);
 camera.position.copy(HOME.t).addScaledVector(DIR,HOME.d);
-export const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(HOME.t);controls.enableDamping=true;controls.dampingFactor=.12;
+export const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(HOME.t);controls.enableDamping=true;controls.dampingFactor=.12;controls.screenSpacePanning=false;/* arrastar com dois dedos/botão direito desliza no plano do chão */
 controls.minDistance=.9;controls.maxDistance=60;controls.minPolarAngle=.35;controls.maxPolarAngle=1.25;controls.update();
 export const hemi=new THREE.HemisphereLight(0xffffff,0xc9d1d9,1);scene.add(hemi);
 export const sun=new THREE.DirectionalLight(0xfff6ea,1.6);sun.position.set(7,12,7);sun.target.position.set(2.5,0,0);scene.add(sun.target);sun.castShadow=true;sun.shadow.mapSize.set(TOQUE?1024:2048,TOQUE?1024:2048);
-Object.assign(sun.shadow.camera,{left:-10,right:10,top:9,bottom:-9,near:1,far:45});sun.shadow.bias=-.0005;sun.shadow.radius=6;scene.add(sun);
+Object.assign(sun.shadow.camera,{left:-10,right:10,top:9,bottom:-9,near:1,far:45});sun.shadow.bias=-.0003;sun.shadow.normalBias=.022;/* normalBias tira as listras de sombra (acne) nas faces quase paralelas à luz */sun.shadow.radius=6;scene.add(sun);
 export function bgTex(c1,c2){const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,c1);g.addColorStop(1,c2);x.fillStyle=g;x.fillRect(0,0,2,256);
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
 export const BGS={a:bgTex('#2a313b','#0e1115'),b:bgTex('#e4edf6','#f6f2ec'),c:bgTex('#F6E7C8','#F1DDB4'),e:bgTex('#f4f6f9','#eef1f5')};scene.background=BGS.b;

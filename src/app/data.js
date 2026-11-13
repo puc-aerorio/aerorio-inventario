@@ -104,6 +104,8 @@ export const M=[
  Pt('T',{orgs:[O('gavetinhas','#c6cbce','M',{nome:'Gaveteiro de resistores',itens:[E('resist',{nivel:2,tipos:[{n:'220 Ω'},{n:'4,7 kΩ'}]})]})]}),Pt('U',{itens:[E('fio',{qtd:6})]})]},
 {id:'est2',lab:'ele',nome:'Estante de baterias',cod:'32',tipo:'estante',n:2,W:1.3,pos:[5.0,0,3.25],rot:Math.PI,real:'#9aa1a8',etq:null,partes:[
  Pt('A'),Pt('N1',{orgs:[O('ferramentas','#5f6468','M',{nome:'Caixa de baterias',itens:[E('lipo',{units:[U(1),U(2),U(3,'boa',{para:'Equipe Uai!rbus',tipo:'externa',desde:NOW-41*DAY}),U(4)]})]})]}),Pt('N2')]}];
+/* posição de projeto de cada móvel (para o botão "Posição original" da edição) */
+for(const m of M){m.pos0=[...m.pos];m.rot0=m.rot;}
 export const SEM={id:'sem',itens:[E('dupla',{qtd:3,t:NOW-2*DAY})]};
 export const ETQ=[{id:'e1',t:'GAVETEIRO AZUL'},{id:'e3',t:'MALETA CAMPO'},{id:'e4',t:'ARMÁRIO 1'},{id:'e5',t:'CAIXA 07'},{id:'e6',t:'BANCADA 2'},...CARD.map((c,i)=>({id:'g'+(i+1),t:c}))];
 for(const m of M)for(const p of m.partes)for(const e of [...p.itens,...p.orgs.flatMap(o=>o.itens)])if(e.ref==='estilete')e.units.forEach(u=>u.v=u.n<3?'Amarelo':'Vermelho');

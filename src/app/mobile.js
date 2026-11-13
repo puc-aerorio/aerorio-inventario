@@ -41,6 +41,25 @@ UIH.sheetFor = t => sheetFor(t);
 export function sheetFor(t) { if (!mob()) return; const a = ALT(); setSheet(t === 'm' ? a.half : Math.max(a.half, Math.min(a.full, Math.round(app.clientHeight * .64)))); }
 addEventListener('resize', () => { if (mob()) setSheet(sheetPx()); });
 
+/* ferramentas de Admin: no computador, um botão ao lado dos temas que abre uma lista vertical;
+   no celular, a mesma lista entra no menu da conta (admListH) */
+{
+  const top = document.querySelector('.ui.top'), bar = document.querySelector('.admbar'), sty = document.querySelector('#styles');
+  const w = document.createElement('div'); w.className = 'admwrap'; w.id = 'admWrap';
+  w.innerHTML = `<button class="pill glass admtog" id="admTog" aria-haspopup="true" aria-expanded="false">${IC.edit}Admin<svg class="i chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></svg></button>`;
+  top.insertBefore(w, sty); bar.classList.remove('ui', 'glass'); bar.classList.add('glass'); w.appendChild(bar);
+  const tog = w.querySelector('#admTog');
+  const fecha = () => { w.classList.remove('on'); tog.setAttribute('aria-expanded', 'false'); };
+  tog.onclick = ev => { ev.stopPropagation(); const on = w.classList.toggle('on'); tog.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+  bar.addEventListener('click', ev => { if (ev.target.closest('button')) fecha(); });
+  document.addEventListener('pointerdown', ev => { if (w.classList.contains('on') && !ev.target.closest('#admWrap')) fecha(); });
+  addEventListener('keydown', ev => { if (ev.key === 'Escape') fecha(); });
+}
+export function admListH(pular = []) {
+  return [...document.querySelectorAll('.admbar button')].filter(b => !pular.includes(b.id)).map(b => `<button class="it" data-adm="${b.id}">${b.textContent}</button>`).join('');
+}
+export function admClick(ev) { const a = ev.target.closest('[data-adm]'); if (!a) return false; const b = document.getElementById(a.dataset.adm); if (b) b.click(); return true; }
+
 /* menu do celular na demonstração: papéis e estilos saem da barra e vão para cá */
 if (!document.querySelector('#acct')) {
   const top = document.querySelector('.ui.top');
@@ -50,10 +69,12 @@ if (!document.querySelector('#acct')) {
   const desenha = () => {
     pop.innerHTML = `<div class="who"><b>Demonstração</b><span>Dados de exemplo, guardados só neste navegador.</span></div>
     <div class="tl">Ver como</div><div class="row stl">${[['vis', 'Visitante'], ['mem', 'Membro'], ['admin', 'Admin']].map(([k, n]) => `<button data-r="${k}" class="${S.role === k ? 'on' : ''}">${n}</button>`).join('')}</div>
-    <div class="tl">Estilo</div><div class="row stl">${[['a', 'Noturno'], ['b', 'Claro'], ['c', 'Ilustrado']].map(([k, n]) => `<button data-st="${k}" class="${S.style === k ? 'on' : ''}"><span class="sw" data-v="${k}"></span>${n}</button>`).join('')}</div>`;
+    <div class="tl">Estilo</div><div class="row stl">${[['a', 'Noturno'], ['b', 'Claro'], ['c', 'Ilustrado']].map(([k, n]) => `<button data-st="${k}" class="${S.style === k ? 'on' : ''}"><span class="sw" data-v="${k}"></span>${n}</button>`).join('')}</div>
+    ${S.role === 'admin' ? `<div class="tl">Admin</div><div class="ilist">${admListH()}</div>` : ''}`;
   };
   document.querySelector('#moreBtn').onclick = ev => { ev.stopPropagation(); if (pop.classList.toggle('on')) desenha(); };
   pop.onclick = ev => {
+    if (admClick(ev)) { pop.classList.remove('on'); return; }
     const r = ev.target.closest('[data-r]'); if (r) { document.querySelector(`#roles [data-r="${r.dataset.r}"]`).click(); desenha(); return; }
     const st = ev.target.closest('[data-st]'); if (st) { document.querySelector(`#styles .sw[data-v="${st.dataset.st}"]`).click(); desenha(); }
   };

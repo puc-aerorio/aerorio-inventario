@@ -120,17 +120,28 @@ export function viewMode(){if(S.stack.length||S.loc||S.vist||S.oc||(S.carry&&S.c
 export const occRay=new THREE.Ray(),tmpV=new THREE.Vector3(),hitV=new THREE.Vector3();export let occT=0;export const OCC_SOLID=[];
 export function alvosVista(mode){const t=[];if(mode==='zoom'){const fc=S.focusT||controls.target;t.push(fc.clone());const f=S.stack[0]?.f||S.loc?.f||(S.carry&&S.carry.target?.f);if(f){t.push(f.center.clone(),f.anchor.clone());}}
  else if(mode==='lab'){for(const f of F)if(f.d.lab===S.lab&&f.bb){const b=f.bb;t.push(f.center.clone(),f.anchor.clone());for(const x of[b.min.x,b.max.x])for(const z of[b.min.z,b.max.z])t.push(new THREE.Vector3(x,(b.min.y+b.max.y)/2,z));}}return t;}
+/* dentro de um lab, a parede também cai se tapa o chão ou os móveis dele (pontos refeitos a cada ~2 s, porque móveis mudam de lugar) */
+let labAlvos=null,labAlvosK='',labAlvosN=0;
+export function alvosLab(){const k=S.lab;if(labAlvos&&labAlvosK===k&&++labAlvosN<30)return labAlvos;labAlvosK=k;labAlvosN=0;const t=alvosVista('lab');
+ for(const [x0,x1,z0,z1] of PLANTA_R[k]||[])for(let x=x0+.6;x<=x1-.5;x+=1.1)for(let z=z0+.6;z<=z1-.5;z+=1.1)t.push(new THREE.Vector3(x+OFF.x,.4,z+OFF.z));
+ return labAlvos=t;}
 export function occTick(dt){const mode=viewMode();
  /* Regras, da mais simples para a mais cara:
     colunas, coifa e ar-condicionado só existem na visão geral;
     parede sai quando a câmera está do lado de fora dela (com faixa morta, para não oscilar na fronteira);
     no zoom, parede que ainda tapa o alvo também sai;
     o que saiu só volta depois de meio segundo livre. */
- if(++occT%4===0){const v=new THREE.Vector2(camera.position.x-controls.target.x,camera.position.z-controls.target.z).normalize();const cam=camera.position;const alvos=mode==='zoom'?alvosVista(mode):[];
+ if(++occT%4===0){const v=new THREE.Vector2(camera.position.x-controls.target.x,camera.position.z-controls.target.z).normalize();const cam=camera.position;const alvos=mode==='zoom'?alvosVista(mode):mode==='lab'?alvosLab():[];
   const tapa=o=>{for(const t of alvos){if(o.box.containsPoint(t))continue;occRay.origin.copy(cam);occRay.direction.copy(tmpV.subVectors(t,cam).normalize());const h=occRay.intersectBox(o.box,hitV);if(h&&cam.distanceTo(hitV)<cam.distanceTo(t)-.12)return true;}return false;};
   for(const o of OCC){let b=false;
    if(o.mode==='down'||o.mode==='up')b=mode!=='over';
-   else if(o.mode==='wall'){const d=o.n?o.n.dot(v):0;b=d>(o.blk?.3:.45);if(FADE===1&&S.lab&&o.lab!==S.lab&&!o.shared)b=true;else if(!b&&mode==='zoom')b=tapa(o);}
+   else if(o.mode==='wall'){
+    /* visão geral: paredes de pé. Dentro de um lab: a parede cai quando a câmera está do lado de fora dela,
+       olhando a partir do lab escolhido (paredes compartilhadas trocam de lado conforme o lab). */
+    if(mode==='over')b=false;
+    else{const outro=!!S.lab&&!o.shared&&o.lab!==S.lab;
+     if(outro)b=FADE===1?true:(mode==='zoom'&&tapa(o));
+     else{const sg=(o.shared&&S.lab==='ele')?-1:1;const d=o.n?o.n.dot(v)*sg:0;b=d>(o.blk?.3:.45);if(!b&&mode!=='over')b=tapa(o);}}}
    else if(o.mode==='keep')b=mode==='zoom'&&tapa(o);
    if(b){o.blk=true;o.livre=0;}else if(o.blk&&++o.livre>=8)o.blk=false;}
   OCC_SOLID.length=0;for(const o of OCC)if((o.mode==='wall'||o.mode==='keep')&&o.s>.6)OCC_SOLID.push(...o.meshes);}

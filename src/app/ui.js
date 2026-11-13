@@ -9,7 +9,7 @@ import { LABGLOW, atrasDeParede, fyW, inLab, roomTick, setRecado, viewMode } fro
 import { ghostPost, ghostPre, post } from './post.js';
 import { applyStyle, applyStyleTo } from './style.js';
 import { buildContents, buildOrg, byId, measure, partW, piece } from './furniture.js';
-import { camTo, ensureLab, focusF, focusLab, focusOrg, focusPart, goHome, labChip, orgOpen, setOpen, updateCut, updateLabChip } from './camera.js';
+import { bestDir, frontOf, camTo, ensureLab, focusF, focusLab, focusOrg, focusPart, goHome, labChip, orgOpen, setOpen, updateCut, updateLabChip } from './camera.js';
 
 /* ================= laboratório (primeiro nível) ================= */
 labChip.onclick=()=>{if(S.carry)return;closeStack(true);deselect();focusLab(null);};
@@ -26,9 +26,11 @@ acard.addEventListener('click',e=>{const t=e.target.closest('[data-tag]');if(t)r
 
 /* ================= pilha de cards ================= */
 export const stackEl=$('#stack');
-export function openStack(entries){acard.classList.remove('on');S.sel=entries[0].f;ensureLab(entries[0].f);
+/* lixo e materiais são só áreas: abrem direto no conteúdo, sem o nível do móvel */
+export const areaUnica=f=>f&&f.d.tipo==='lugar'&&f.d.partes.length===1;
+export function openStack(entries){entries=entries.filter((e,i)=>!(e.t==='m'&&areaUnica(e.f)&&entries[i+1]&&entries[i+1].f===e.f));acard.classList.remove('on');S.sel=entries[0].f;ensureLab(entries[0].f);
  [...stackEl.querySelectorAll('.scard')].forEach(c=>c.remove());S.stack=[];entries.forEach((e,i)=>pushCard(e,i<entries.length-1));home();}
-export function pushCard(e,silent){S.stack.push(e);UIH.sheetFor&&UIH.sheetFor(e.t);wake();const el=document.createElement('div');el.className='scard glass'+(silent?'':' enter');stackEl.appendChild(el);e.el=el;
+export function pushCard(e,silent){if(e.t==='m'&&areaUnica(e.f))e={t:'p',f:e.f,p:e.f.d.partes[0]};S.stack.push(e);UIH.sheetFor&&UIH.sheetFor(e.t);wake();const el=document.createElement('div');el.className='scard glass'+(silent?'':' enter');stackEl.appendChild(el);e.el=el;
  renderCard(e);layoutStack();if(!silent)requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('enter')));if(!silent||S.stack.length)onTop();}
 export function popTo(i){wake();while(S.stack.length-1>i){const e=S.stack.pop();e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);}layoutStack();onTop();}
 export function closeStack(quiet){wake();S.stack.forEach(e=>{e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);});const f=S.stack[0]&&S.stack[0].f;S.stack=[];if(f)setOpen(f,null);
@@ -36,7 +38,7 @@ export function closeStack(quiet){wake();S.stack.forEach(e=>{e.el.classList.add(
 export function layoutStack(){const n=S.stack.length;S.stack.forEach((e,i)=>{const depth=n-1-i;e.el.style.top=(i*50)+'px';e.el.style.zIndex=i;e.el.style.transform=depth?`scale(${1-depth*.025})`:'';e.el.classList.toggle('under',!!depth);});}
 export function onTop(){const top=S.stack[S.stack.length-1];if(!top)return;const f=top.f;
  if(top.t==='m'){setOpen(f,null);focusF(f);}
- else if(top.t==='p'){setOpen(f,top.p.id);focusPart(f,top.p.id);}
+ else if(top.t==='p'){setOpen(f,top.p.id);if(areaUnica(f))focusF(f);else focusPart(f,top.p.id);}
  else if(top.t==='o'){setOpen(f,top.p.id);orgOpen(f,top.p.id,top.o.id,1);focusOrg(f,top.p.id,top.o);}}
 stackEl.addEventListener('click',ev=>{const card=ev.target.closest('.scard');if(!card)return;const i=S.stack.findIndex(x=>x.el===card);
  if(i<S.stack.length-1){popTo(i);return;}handleCard(ev,S.stack[i]);});
@@ -49,12 +51,13 @@ export function cardHead(e){const i=S.stack.indexOf(e);const prev=S.stack[i-1];
  const back=prev?`<button class="back" data-b="back">${IC.back}${prev.t==='m'?prev.f.d.nome:prev.t==='p'?partName(prev.f.d,prev.p):prev.t==='o'?orgName(prev.o):''}</button>`:`<button class="back" data-b="close">${IC.back}${byLab(e.f.d.lab).nome.replace('Laboratório de ','Lab. de ')}</button>`;
  let nav='',title='',tag='',code='';
  if(e.t==='m'){nav=`<span class="nav"><button data-b="prev" title="Móvel anterior">${IC.back}</button><button data-b="next" title="Próximo móvel">${IC.next}</button></span>`;title=e.f.d.nome;tag=tagH(e.f.d,refOf(e));code=e.f.d.cod;}
- if(e.t==='p'){const ps=visParts(e.f,false);const tb=['mesa','serra','bancada','computador'].includes(e.f.d.tipo);
+ if(e.t==='p'&&areaUnica(e.f)){nav=`<span class="nav"><button data-b="prev" title="Móvel anterior">${IC.back}</button><button data-b="next" title="Próximo móvel">${IC.next}</button></span>`;title=e.f.d.nome;tag=tagH(e.p,refOf(e));code=e.f.d.cod;}
+ else if(e.t==='p'){const ps=visParts(e.f,false);const tb=['mesa','serra','bancada','computador'].includes(e.f.d.tipo);
   nav=`<span class="nav mmap"><button data-b="pprev">${IC.back}</button><span class="msil ${tb?'tb':''}" title="Partes do móvel">${ps.map(p=>`<i class="${p===e.p?'on':''}" data-goto="${p.id}"></i>`).join('')}</span><button data-b="pnext">${IC.next}</button></span>`;
   title=partName(e.f.d,e.p);tag=tagH(e.p,refOf(e));code=e.f.d.cod+'-'+e.p.id;}
  if(e.t==='o'){title=orgName(e.o);tag=tagH(e.o,refOf(e));code='ORG-'+e.o.id.toUpperCase();}
  if(e.t==='i'){const it=IT(e.x.e);return `<div class="sh"><div class="row1">${back}</div><h3>${clsH(it.cl)}${it.nome}</h3></div>`;}
- const ren=(e.t==='p'||e.t==='o')?`<button class="ren" data-b="ren" data-need="m" title="Renomear">${IC.edit}</button>`:'';
+ const ren=((e.t==='p'&&!areaUnica(e.f))||e.t==='o')?`<button class="ren" data-b="ren" data-need="m" title="Renomear">${IC.edit}</button>`:'';
  return `<div class="sh"><div class="row1">${back}${nav}</div><div class="tagrow">${tag}</div><h3>${e.t==='o'?orgIso(e.o.tipo,e.o.cor):''}<span class="tt">${title}</span>${ren} <span class="code">${code}</span></h3></div>`;}
 export function subH(f,p){const st=stats(p);const carry=S.carry;const dis=carry&&p.cheia;const empty=!st.u&&!p.orgs.length;
  return `<div class="sub ${carry&&!dis?'drop':''} ${dis?'dis':''} ${empty?'empty':''} ${S.hoverPart&&S.hoverPart.f===f&&S.hoverPart.pid===p.id?'hov':''} ${p.id==='A'?'above':''}" data-part="${p.id}">
@@ -487,8 +490,12 @@ export function startVist(){closeStack(true);deselect();const lab=S.lab||'man';f
 export function stopVist(){if(S.vist){const f=S.vist.route[S.vist.i];f&&setOpen(f,null);}S.vist=null;vs.classList.remove('on');setMode('nav');S.sel=null;goHome();home();}
 /* a parte conferida guarda a data: a vistoria seguinte usa isso para priorizar */
 export function conferido(f){if(!f)return;const em=Date.now(),por=S.me||'';for(const p of f.d.partes)p.conf={em,por};save();}
-export function vistGo(){const v=S.vist;const f=v.route[v.i];if(!f){renderVist();return;}S.sel=f;const dist=Math.max(8,Math.min(12,f.size*6));const t=f.center.clone();t.y=Math.min(t.y,1);
- const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1);const wpp=2*dist*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))/app.clientHeight;t.addScaledVector(up,-app.clientHeight*.22*wpp);camTo(t,dist);renderVist();}
+export function vistGo(){const v=S.vist;const f=v.route[v.i];if(!f){renderVist();return;}S.sel=f;
+ /* mesma regra do foco normal: de frente para o móvel, sem parede no caminho; um pouco mais longe e com o móvel acima da folha da vistoria */
+ const asp_=app.clientWidth/app.clientHeight;const dist=Math.max(4.2,Math.min(8.5,f.size*2.6+2.4))*Math.pow(Math.max(1,1.2/asp_),.7);const t=f.center.clone();t.y=Math.min(t.y,1);
+ const fr=frontOf(f);const dir=bestDir(t,dist,fr.clone().add(new THREE.Vector3(-.15,.95,.3)),f);
+ const fw=dir.clone().negate();const right=new THREE.Vector3().crossVectors(fw,new THREE.Vector3(0,1,0)).normalize();const up=new THREE.Vector3().crossVectors(right,fw).normalize();
+ const wpp=2*dist*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))/app.clientHeight;t.addScaledVector(up,-app.clientHeight*.2*wpp);camTo(t,dist,dir);renderVist();}
 export function renderVist(){const v=S.vist;if(!v)return;const n=v.route.length;const f=v.route[v.i];
  if(!f){vs.innerHTML=`<div class="hd"><div class="grab"></div><h3 style="margin:0;font:600 1.5rem var(--cond)">Vistoria concluída</h3><div class="vprog"><i style="width:100%"></i></div></div>
   <div class="bd"><div class="cnts" style="margin:12px 0;gap:18px;font-size:1.4rem"><span class="cnt" style="font-size:1.4rem">${IC.check}${v.ok.size} conferidos</span><span class="cnt" style="font-size:1.4rem">${IC.edit}${v.fix.size} corrigidos</span><span class="cnt w" style="font-size:1.4rem">${IC.alert}${allLoc().filter(x=>isAlert(x.e)).length} alertas</span></div></div>
@@ -516,7 +523,16 @@ document.querySelectorAll('#roles button').forEach(b=>b.onclick=()=>setRole(b.da
 $('#editBtn').onclick=()=>{closeStack(true);deselect();S.edit=true;applyStyle();home();toast('Clique num móvel e arraste. Os outros ficam em desenho técnico.',null,3500);};
 export function endEdit(){S.edit=false;S.sel=null;applyStyle();home();}
 $('#edDone').onclick=endEdit;
-$('#rotBtn').onclick=()=>{const f=S.sel;if(!f)return toast('Selecione um móvel primeiro',null,1800);const r0=f.g.rotation.y;tween({ms:420,ease:'spring',update:p=>f.g.rotation.y=r0+p*Math.PI/2,done:()=>{f.d.rot=f.g.rotation.y;measure(f);log(`${f.d.nome}: girado 90°`);}});};
+/* móveis não se atravessam: vale a caixa de cada um; o que já se tocava antes de mexer (armário suspenso sobre bancada) continua podendo */
+export function tocando(f,bb){const r=new Set();const b=bb.clone().expandByScalar(-.03);for(const g of F)if(g!==f&&g.bb&&g.d.lab===f.d.lab&&g.bb.intersectsBox(b))r.add(g);return r;}
+export function colide(f,bb0,dx,dz,antes){const b=bb0.clone().translate(new THREE.Vector3(dx,0,dz));for(const g of tocando(f,b))if(!antes.has(g))return g;return null;}
+$('#origBtn').onclick=()=>{const f=S.sel;if(!f)return toast('Selecione um móvel primeiro',null,1800);const d=f.d;if(!d.pos0)return;
+ const p0=f.g.position.clone(),r0=f.g.rotation.y,p1=new THREE.Vector3(...d.pos0),r1=d.rot0||0;if(p0.distanceTo(p1)<.01&&Math.abs(r0-r1)<.01)return toast(`<b>${d.nome}</b> já está na posição original`,null,1800);
+ tween({ms:520,ease:'spring',update:p=>{f.g.position.lerpVectors(p0,p1,p);f.g.rotation.y=r0+(r1-r0)*p;},done:()=>{d.pos=[...d.pos0];d.rot=r1;measure(f);log(`${d.nome}: voltou à posição original`);}});};
+$('#rotBtn').onclick=()=>{const f=S.sel;if(!f)return toast('Selecione um móvel primeiro',null,1800);const r0=f.g.rotation.y;const antes=tocando(f,f.bb);
+ f.g.rotation.y=r0+Math.PI/2;f.g.updateMatrixWorld(true);const bb=new THREE.Box3();f.g.traverse(o=>{if(o.isMesh&&o.userData.base)bb.expandByObject(o);});f.g.rotation.y=r0;f.g.updateMatrixWorld(true);
+ const g=[...tocando(f,bb)].find(x=>!antes.has(x));if(g)return toast(`Girando, <b>${f.d.nome}</b> bateria em <b>${g.d.nome}</b>. Afaste antes.`,null,2400);
+ tween({ms:420,ease:'spring',update:p=>f.g.rotation.y=r0+p*Math.PI/2,done:()=>{f.d.rot=f.g.rotation.y;measure(f);log(`${f.d.nome}: girado 90°`);}});};
 export function home(){$('#home').classList.toggle('hide',!!(S.stack.length||S.carry||S.vist||S.edit||S.oc||S.loc));}
 $('#gBtn').onclick=ev=>openPalette('guardar',{},ev.currentTarget);
 $('#searchBtn').onclick=ev=>openPalette('buscar',{},ev.currentTarget);
@@ -545,11 +561,11 @@ export function pickLab(){ray.setFromCamera(ndc,camera);const fl=[];for(const L 
 export function pickOrg(f,pid){ray.setFromCamera(ndc,camera);const ms=[];f.parts[pid].content.traverse(o=>{if(o.isMesh&&o.userData.org)ms.push(o);});const h=ray.intersectObjects(ms,false)[0];return h?f.d.partes.find(p=>p.id===pid).orgs.find(o=>o.id===h.object.userData.org):null;}
 cvs.addEventListener('pointermove',ev=>{setNdc(ev);needPick=true;
  if(drag){ray.setFromCamera(ndc,camera);const hit=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),hit)){const sn=v=>Math.round(v*4)/4;const L=byLab(drag.f.d.lab);
-  const nx=sn(hit.x-drag.ox),nz=sn(hit.z-drag.oz);if(inLab(drag.f.d.lab,nx,nz)){drag.f.g.position.set(nx,fyW(nx,nz),nz);drag.moved=true;}}}});
+  const nx=sn(hit.x-drag.ox),nz=sn(hit.z-drag.oz);if(inLab(drag.f.d.lab,nx,nz)&&!colide(drag.f,drag.bb0,nx-drag.p0.x,nz-drag.p0.z,drag.antes)){drag.f.g.position.set(nx,fyW(nx,nz),nz);drag.moved=true;}}}});
 cvs.addEventListener('pointerleave',()=>{ptr.in=false;setHover(null);tip.classList.remove('on');});
 cvs.addEventListener('pointerdown',ev=>{down={x:ev.clientX,y:ev.clientY};setNdc(ev);
  if(S.edit){const f=pickF();if(f){S.sel=f;applyStyle();ray.setFromCamera(ndc,camera);const hit=new THREE.Vector3();ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),hit);
-  drag={f,ox:hit.x-f.g.position.x,oz:hit.z-f.g.position.z,moved:false};controls.enabled=false;cvs.setPointerCapture(ev.pointerId);}}});
+  drag={f,ox:hit.x-f.g.position.x,oz:hit.z-f.g.position.z,moved:false,bb0:f.bb.clone(),p0:f.g.position.clone(),antes:tocando(f,f.bb)};controls.enabled=false;cvs.setPointerCapture(ev.pointerId);}}});
 cvs.addEventListener('pointerup',ev=>{if(drag){const d=drag;drag=null;controls.enabled=true;if(d.moved){d.f.d.pos=[d.f.g.position.x,d.f.g.position.y,d.f.g.position.z];measure(d.f);log(`${d.f.d.nome}: posição alterada`);}down=null;return;}
  if(!down)return;const mv=Math.hypot(ev.clientX-down.x,ev.clientY-down.y);down=null;if(mv>6||ev.button!==0)return;setNdc(ev);click();});
 cvs.addEventListener('dblclick',()=>{if(S.carry||S.edit||S.vist||S.oc)return;const f=pickF();if(f)openStack([{t:'m',f}]);});
@@ -632,10 +648,17 @@ export function loop(now){const dt=Math.min(100,now-last);last=now;runTweens(now
   else if(S.hover&&!S.stack.length&&!S.carry&&!S.edit)sel.push(S.hover.g);
   post.outline.selectedObjects=sel;
   const focused=S.stack.length>0||!!S.vist||!!S.oc||(S.carry&&S.carry.stage==='confirm');S.focusAmt+=((focused?1:0)-S.focusAmt)*.08;
-  post.bokeh.enabled=S.focusAmt>.02&&!S.edit;post.bokeh.uniforms.focus.value=S.oc?1.5:camera.position.distanceTo(controls.target);post.bokeh.uniforms.aperture.value=(S.oc?.012:.004)*S.focusAmt;post.bokeh.uniforms.maxblur.value=.009;post.c.render();}
+  post.bokeh.enabled=S.focusAmt>.02&&!S.edit;post.bokeh.uniforms.focus.value=S.oc?1.5:focoProf();post.bokeh.uniforms.aperture.value=(S.oc?.012:.004)*S.focusAmt;post.bokeh.uniforms.maxblur.value=.009;post.c.render();}
  else renderer.render(scene,camera);
  ghostPost(gh);
  placeOverlays();labTags();requestAnimationFrame(loop);}
+/* foco do desfoque: profundidade (no espaço da câmera) do móvel ou da parte em foco, qualquer que seja a distância, o giro ou o zoom */
+const fv=new THREE.Vector3();
+export function focoProf(){const top=S.stack[S.stack.length-1];let f=null,pid=null;
+ if(top){f=top.f;pid=top.t==='p'||top.t==='o'?top.p.id:null;}else if(S.vist)f=S.vist.route[S.vist.i];else if(S.carry&&S.carry.target){f=S.carry.target.f;pid=S.carry.target.p.id;}
+ if(!f)return camera.position.distanceTo(controls.target);
+ if(pid&&f.parts[pid])fv.copy(partW(f,pid));else fv.copy(f.center);
+ fv.applyMatrix4(camera.matrixWorldInverse);return Math.max(.5,-fv.z);}
 export function want_y(){return (S.stack.length||S.oc)&&mob()?(S.stack.length?(S.sheetH||app.clientHeight*.56)/2:app.clientHeight*.24):0;}
 /* parado: só conta o tempo e espera; o alerta pulsante do móvel aberto continua no modo completo */
 export function parado(now){return now>RENDER.ate&&!(S.stack.length&&!LITE)&&!S.vist;}
