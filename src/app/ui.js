@@ -56,7 +56,7 @@ export function cardHead(e){const i=S.stack.indexOf(e);const prev=S.stack[i-1];
   nav=`<span class="nav mmap"><button data-b="pprev">${IC.back}</button><span class="msil ${tb?'tb':''}" title="Partes do móvel">${ps.map(p=>`<i class="${p===e.p?'on':''}" data-goto="${p.id}"></i>`).join('')}</span><button data-b="pnext">${IC.next}</button></span>`;
   title=partName(e.f.d,e.p);tag=tagH(e.p,refOf(e));code=e.f.d.cod+'-'+e.p.id;}
  if(e.t==='o'){title=orgName(e.o);tag=tagH(e.o,refOf(e));code='ORG-'+e.o.id.toUpperCase();}
- if(e.t==='i'){const it=IT(e.x.e);return `<div class="sh"><div class="row1">${back}</div><h3>${clsH(it.cl)}${it.nome}</h3></div>`;}
+ if(e.t==='i'||e.t==='ed'){const it=IT(e.x.e);return `<div class="sh"><div class="row1">${back}</div>${e.t==='ed'?'<div class="kick">Editar cadastro</div>':''}<h3>${clsH(e.t==='ed'?e.ed.cl:it.cl)}${e.t==='ed'?e.ed.nome||it.nome:it.nome}</h3></div>`;}
  const ren=((e.t==='p'&&!areaUnica(e.f))||e.t==='o')?`<button class="ren" data-b="ren" data-need="m" title="Renomear">${IC.edit}</button>`:'';
  return `<div class="sh"><div class="row1">${back}${nav}</div><div class="tagrow">${tag}</div><h3>${e.t==='o'?orgIso(e.o.tipo,e.o.cor):''}<span class="tt">${title}</span>${ren} <span class="code">${code}</span></h3></div>`;}
 export function subH(f,p){const st=stats(p);const carry=S.carry;const dis=carry&&p.cheia;const empty=!st.u&&!p.orgs.length;
@@ -85,6 +85,7 @@ export function renderCard(e){const sc=e.el.querySelector('.sb')?.scrollTop||0;l
   b+=`<div class="grp">Dentro de ${orgName(o).toLowerCase()}<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button></span></div>`;
   b+=o.itens.length?o.itens.map(x=>itemH(x,e)).join(''):'<div style="color:var(--ink3);font-size:.85rem">Vazio.</div>';}
  else if(e.t==='i')b+=detailH(e);
+ else if(e.t==='ed')b+=editCardH(e);
  e.el.innerHTML=cardHead(e)+`<div class="sb">${b}</div>`;e.el.querySelector('.sb').scrollTop=sc;layoutStack();}
 export function orgRowH(o){const st=stats(o);return `<div class="orow ${S.carry&&S.carry.stage==='confirm'?'drop':''}" data-org="${o.id}">${orgIso(o.tipo,o.cor)}<div><div class="on">${orgName(o)}</div></div><span>${cntH({u:st.u,org:0,al:st.al})}</span><div class="os"><span class="clsrow">${clsIconsH(st)}</span>${o.etq?`<span class="plabel" style="font-size:.62rem;pointer-events:none">${etqOf(o.etq).t}</span>`:''}</div></div>`;}
 export function refreshCards(){S.stack.forEach(renderCard);if(S.sel&&acard.classList.contains('on'))select(S.sel);refreshBadges();}
@@ -97,28 +98,119 @@ export function itemH(e,ctx,opt={}){const it=IT(e),c=CL[it.cl].c;const al=alerts
  else if(it.modo==='unidades'){q=`<div class="q">${odoH(e.units.length)}<small>${e.units.length===1?'unidade':'unidades'}</small></div>`;
   ctl=`<div class="units">${e.units.map(u=>unitH(u,it)).join('')}<button class="uc add" data-act="addunit" data-need="m" title="Registrar mais uma unidade">+</button></div>${vlegH(e,it)}`;}
  else{q=`<div class="q" style="font-size:1rem">${NIVEIS[e.nivel]}</div>`;
-  ctl=`<span class="gauge" style="--c:${c}"><i style="height:${e.nivel/3*100}%"></i></span><div class="gsel" data-need="m">${NIVEIS.map((n,k)=>`<button data-act="lvl" data-n="${k}" class="${k===e.nivel?'on':''}">${n}</button>`).join('')}</div>
-   <div class="tps">${(e.tipos||[]).map((t,k)=>`<button class="tp ${t.aus?'aus':''}" data-act="tipo" data-k="${k}" title="${t.aus?'Encontrado':'Registrar falta'}">${t.n}</button>`).join('')}<button class="tp" data-act="addtipo" data-need="m">+ tipo</button></div>`;}
+  /* caixa/kit: duas linhas rotuladas — quanto tem (nível) e o que tem dentro (tipos; tocar marca falta) */
+  ctl=`<div class="cjrow"><span class="cjl">Quanto tem</span><span class="gauge" style="--c:${c}"><i style="height:${e.nivel/3*100}%"></i></span><div class="gsel" data-need="m">${NIVEIS.map((n,k)=>`<button data-act="lvl" data-n="${k}" class="${k===e.nivel?'on':''}">${n}</button>`).join('')}</div></div>
+   <div class="cjrow"><span class="cjl">Tipos dentro</span><div class="tps">${(e.tipos||[]).map((t,k)=>`<button class="tp ${t.aus?'aus':''}" data-act="tipo" data-k="${k}" title="${t.aus?'Está faltando · toque quando repor':'Toque para marcar que está faltando'}">${t.aus?'⚠ ':''}${t.n}</button>`).join('')}<button class="tp add" data-act="addtipo" data-need="m">+ tipo</button></div></div>`;}
  const acts=`<div class="acts">${[['det','info','Detalhes'],['edit','edit','Editar'],['mov','move','Mudar de lugar'],['rm','trash','Remover'],['nf','nf',e.nf?'Encontrei':'Não encontrei']].concat(it.modo==='unidades'?[['emp','hand','Emprestar']]:[]).map(([a,i,t])=>`<button class="ibtn" data-a="${a}" data-tt="${t}">${IC[i]}</button>`).join('')}</div>`;
  const open=S.openRow===e.id;
  return `<div class="irow ${open?'open':''} ${esg?'esg':''}" data-item="${e.id}">${clsH(it.cl,it.modo==='contavel'&&e.qtd<=it.min&&e.qtd>0?'pulse':'')}<div class="nm">${it.nome}${opt.path?`<small>${opt.path}</small>`:''}</div>${q}
-  <div class="wr">${al.map(([k,t])=>`<span class="wn ${k}">${t}</span>`).join('')}</div><div class="ctl">${ctl}</div>${acts}${e._edit?editH(e):''}</div>`;}
+  <div class="wr">${al.map(([k,t])=>`<span class="wn ${k}">${t}</span>`).join('')}</div><div class="ctl">${ctl}</div>${acts}</div>`;}
 export const unitH=(u,it)=>{const [n,c]=ESTADOS[u.estado];const op=it&&identOp(it,u.v);
  return `<button class="uc ${u.emp?'emp':''} ${op?(op.c?'vcor':'vtxt'):''}" data-act="unit" data-u="${u.n}" style="--sc:${c}${op&&op.c?';--vc:'+op.c:''}" title="#${u.n}${op?' · '+op.n:''} · ${n}${u.emp?' · com '+u.emp.para:''}">${op&&!op.c?`<b>${op.n.slice(0,1).toUpperCase()}</b><i>${u.n}</i>`:u.n}</button>`;};
 export const vlegH=(e,it)=>it.ident?`<div class="vleg"><span>${it.ident.nome}</span>${it.ident.ops.map(o=>[o,e.units.filter(u=>u.v===o.n).length]).filter(x=>x[1]).map(([o,q])=>`<span>${o.c?`<i style="background:${o.c}"></i>`:''}${o.n} <b>${q}</b></span>`).join('')}</div>`:'';
-export function editH(e){const it=IT(e);const keys=SPECK[it.cl]||[];
- return `<div class="form" style="grid-column:1/4" data-edit><label>Nome<input name="nome" value="${it.nome}"></label><div class="row"><label>Classe<select name="cl">${Object.entries(CL).map(([k,v])=>`<option value="${k}" ${k===it.cl?'selected':''}>${v.n}</option>`).join('')}</select></label>
-  ${it.modo==='contavel'?`<label>Unidade<input name="un" value="${it.un}"></label><label>Mínimo<input name="min" type="number" value="${it.min}"></label>`:''}</div>
-  ${keys.map(k=>`<label>${k}<input data-spec="${k}" value="${it.spec[k]||''}"></label>`).join('')}<label>Descrição<textarea name="desc" rows="2">${it.desc||''}</textarea></label>
-  <div class="row" style="justify-content:flex-end"><button class="pill sm" data-act="ecancel" style="flex:0">Cancelar</button><button class="pill sm pri" data-act="esave" style="flex:0">Salvar</button></div></div>`;}
-export function detailH(e){const x=e.x,it=IT(x.e);const locs=allLoc().filter(y=>y.e.ref===it.id);const hist=LOG.filter(l=>l.ref===it.id).slice(0,12);
- return `${it.desc?`<p style="margin:2px 0 10px;color:var(--ink2)">${it.desc}</p>`:''}
-  <div class="grp">Especificações</div><dl class="specs"><dt>Classe</dt><dd>${CL[it.cl].n}</dd>${it.modo==='contavel'?`<dt>Mínimo</dt><dd>${it.min} ${it.un}</dd>`:''}${it.ident?`<dt>${it.ident.nome}</dt><dd>${it.ident.ops.map(o=>o.n).join(', ')}</dd>`:''}${Object.entries(it.spec).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+/* ---------- detalhes do item (card próprio) ---------- */
+export function detailH(e){const x=e.x,it=IT(x.e);const locs=allLoc().filter(y=>y.e.ref===it.id);const hist=LOG.filter(l=>l.ref===it.id);
+ const tot=locs.reduce((a,y)=>a+unitsOf(y.e),0);let tiles='',extra='';
+ if(it.modo==='unidades'){const us=locs.flatMap(y=>y.e.units);const emp=us.filter(u=>u.emp).length,at=us.filter(u=>u.estado==='quebrada'||u.estado==='manutencao').length;
+  tiles=[[tot,tot===1?'unidade no total':'unidades no total'],[x.e.units.length,'neste lugar'],[emp,emp===1?'emprestada':'emprestadas'],[at,'quebradas ou em manutenção']].map(([n,t])=>`<div class="dtile"><b>${n}</b><span>${t}</span></div>`).join('');
+  const est=Object.entries(ESTADOS).map(([k,[n,c]])=>[n,c,us.filter(u=>u.estado===k).length]).filter(z=>z[2]);
+  extra+=`<div class="grp">Situação das unidades</div><div class="chipsl">${est.map(([n,c,q])=>`<span class="chipl"><i style="background:${c}"></i>${n} <b>${q}</b></span>`).join('')}</div>`;
+  if(it.ident)extra+=`<div class="grp">${it.ident.nome}</div><div class="chipsl">${it.ident.ops.map(o=>`<span class="chipl">${o.c?`<i style="background:${o.c}"></i>`:''}${o.n} <b>${us.filter(u=>u.v===o.n).length}</b></span>`).join('')}${us.some(u=>!u.v)?`<span class="chipl muted">Sem ${it.ident.nome.toLowerCase()} <b>${us.filter(u=>!u.v).length}</b></span>`:''}</div>`;
+  const ls=locs.flatMap(y=>y.e.units.filter(u=>u.emp).map(u=>({y,u})));if(ls.length)extra+=`<div class="grp">Emprestadas</div><div class="locs">${ls.map(({y,u})=>{const atr=u.emp.prazo&&u.emp.prazo<Date.now();return `<div class="lr">${IC.hand}<span>#${u.n} com <b>${u.emp.para}</b> desde ${new Date(u.emp.desde).toLocaleDateString('pt-BR')}${u.emp.prazo?` · ${atr?'<b class="atr">atrasado, prazo':'prazo'} ${new Date(u.emp.prazo).toLocaleDateString('pt-BR')}${atr?'</b>':''}`:''}</span></div>`;}).join('')}</div>`;}
+ else if(it.modo==='contavel'){tiles=[[tot,`${it.un} no total`],[x.e.qtd,'neste lugar'],[it.min,'mínimo (aviso)']].map(([n,t])=>`<div class="dtile"><b>${n}</b><span>${t}</span></div>`).join('');}
+ else{tiles=`<div class="dtile"><b>${NIVEIS[x.e.nivel]}</b><span>neste lugar</span></div><div class="dtile"><b>${(x.e.tipos||[]).length}</b><span>tipos dentro</span></div><div class="dtile"><b>${(x.e.tipos||[]).filter(t=>t.aus).length}</b><span>faltando</span></div>`;
+  if((x.e.tipos||[]).length)extra+=`<div class="grp">Tipos dentro</div><div class="chipsl">${x.e.tipos.map(t=>`<span class="chipl ${t.aus?'warn':''}">${t.aus?'⚠ ':''}${t.n}${t.aus?' · faltando':''}</span>`).join('')}</div>`;}
+ const specs=Object.entries(it.spec||{});
+ return `${it.desc?`<p class="ddesc">${it.desc}</p>`:''}<div class="dtiles">${tiles}</div>
+  <div class="mf in" data-need="m" style="justify-content:flex-start;margin:0 0 6px"><button class="pill sm" data-b="editar">${IC.edit}Editar cadastro</button></div>
+  ${extra}
+  <div class="grp">Cadastro</div><dl class="specs"><dt>Classe</dt><dd>${(CL[it.cl]||CL.div).n}</dd><dt>Controle</dt><dd>${{unidades:'Por unidade (patrimônio)',contavel:'Por quantidade (consumível)',conjunto:'Caixa ou kit (nível)'}[it.modo]}</dd>${it.modo==='contavel'?`<dt>Unidade</dt><dd>${it.un}</dd>`:''}${specs.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
   <div class="grp">Onde está</div><div class="locs">${locs.map(y=>`<div class="lr">${IC.loc}<span>${pathOf(y)}</span><b>${IT(y.e).modo==='conjunto'?NIVEIS[y.e.nivel]:unitsOf(y.e)}</b><button class="link" data-b="loc" data-e="${y.e.id}">Localizar</button></div>`).join('')}</div>
-  <div class="grp">Histórico</div><ul class="hist2" style="list-style:none;margin:0;padding:0">${hist.length?hist.map(l=>`<li><span class="t">${l.h}</span>${l.t}</li>`).join(''):'<li style="color:var(--ink3)">Sem movimentações nesta sessão.</li>'}</ul>
-  <div class="grp">Observações</div><textarea class="obs" data-need="m" style="width:100%;border:0;border-radius:10px;padding:9px;background:var(--bt);box-shadow:inset 0 0 0 1px var(--chip)" rows="3" placeholder="Anotações da equipe sobre este item…">${it.obs}</textarea>`;}
+  <details class="histd"><summary>Histórico <span>${hist.length?hist.length+(hist.length===1?' registro':' registros'):'nenhum registro ainda'}</span></summary><ul class="hist2">${hist.slice(0,60).map(l=>`<li><span class="t">${l.h}</span>${l.t}</li>`).join('')||'<li style="color:var(--ink3)">Nada registrado para este item.</li>'}</ul></details>
+  <div class="grp">Observações</div><textarea class="obs" data-need="m" rows="3" placeholder="Anotações da equipe sobre este item…">${it.obs||''}</textarea>`;}
+
+/* ---------- diferenciar unidades (cor, tamanho, outro): editor compartilhado entre criar e editar ---------- */
+export const PALETA=[['Vermelho','#C8553D'],['Laranja','#E07A1F'],['Amarelo','#E0B12E'],['Verde','#4C9A6A'],['Verde-limão','#9BC53D'],['Azul','#3E7CB1'],['Azul-claro','#5DADE2'],['Roxo','#8E5BD0'],['Rosa','#E58FB0'],['Marrom','#8B5A3C'],['Preto','#2b3138'],['Cinza','#7A8794'],['Branco','#F2F2EE']];
+const CORN={vermelho:'#C8553D',vermelha:'#C8553D',laranja:'#E07A1F',amarelo:'#E0B12E',amarela:'#E0B12E',verde:'#4C9A6A',limao:'#9BC53D','verde-limao':'#9BC53D',azul:'#3E7CB1','azul-claro':'#5DADE2',celeste:'#5DADE2',ciano:'#2BB3C0',turquesa:'#2BB3C0',roxo:'#8E5BD0',roxa:'#8E5BD0',lilas:'#B38FD9',violeta:'#8E5BD0',rosa:'#E58FB0',pink:'#E58FB0',magenta:'#C2409A',marrom:'#8B5A3C',bege:'#D9C4A0',preto:'#2b3138',preta:'#2b3138',cinza:'#7A8794',prata:'#B8BCC0',prateado:'#B8BCC0',dourado:'#C9A23A',dourada:'#C9A23A',branco:'#F2F2EE',branca:'#F2F2EE',vinho:'#7B2D3B',grafite:'#4A5058'};
+export const corDoNome=(n,usadas=[])=>{const k=norm(n).trim().replace(/\s+/g,'-');if(CORN[k])return CORN[k];const k1=k.split('-')[0];if(CORN[k1])return CORN[k1];return (PALETA.find(([,c])=>!usadas.includes(c))||PALETA[0])[1];};
+const IDNOME={cor:'Cor',tam:'Tamanho'};
+export function identDe(it){if(!it.ident)return {k:'',nome:'',ops:[],novo:''};const k=it.ident.tipo==='cor'?'cor':norm(it.ident.nome)==='tamanho'?'tam':'outro';return {k,nome:k==='outro'?it.ident.nome:'',ops:it.ident.ops.map(o=>({n:o.n,c:o.c||null,o:o.n,q:0})),novo:''};}
+export function identH(ed,cont,uso={}){const tot=ed.ops.reduce((a,o)=>a+(o.q||0),0);
+ return `<div class="ided"><div class="flbl">Como diferenciar as unidades <span>(opcional)</span></div>
+  <div class="hint">Use quando as unidades não são iguais entre si: estiletes de cores diferentes, chaves de tamanhos diferentes, pontas diferentes…</div>
+  <div class="gsel">${[['','Não precisa'],['cor','Por cor'],['tam','Por tamanho'],['outro','Outro critério']].map(([k,v])=>`<button data-idk="${k}" class="${k===ed.k?'on':''}">${v}</button>`).join('')}</div>
+  ${ed.k?`${ed.k==='outro'?`<label>Nome do critério<input data-idf="nome" value="${ed.nome}" placeholder="Ex.: Ponta, Material, Voltagem"></label>`:''}
+   ${ed.ops.length?`<div class="idops">${ed.ops.map((o,i)=>`<div class="idop">${ed.k==='cor'?`<label class="csw" style="--c:${o.c}" title="Trocar a cor"><input type="color" data-idc="${i}" value="${o.c}"></label>`:''}<input class="idnm" data-idnm="${i}" value="${o.n}" aria-label="Nome da opção">${cont?`<span class="stp"><button data-idq="${i}" data-d="-1" aria-label="Menos uma">−</button><b>${o.q||0}</b><button data-idq="${i}" data-d="1" aria-label="Mais uma">+</button></span>`:`<span class="uso">${uso[o.o]?uso[o.o]+' un.':'sem uso'}</span>`}<button class="idx" data-idx="${i}" title="${uso[o.o]?'Em uso: troque as unidades antes de tirar':'Tirar esta opção'}" ${uso[o.o]?'disabled':''}>×</button></div>`).join('')}</div>`:`<div class="hint">Nenhuma opção ainda. ${ed.k==='cor'?'Toque nas cores abaixo':'Adicione abaixo'}${cont?' e diga quantas unidades há de cada uma':''}.</div>`}
+   ${ed.k==='cor'?`<div class="cpal">${PALETA.filter(([n])=>!ed.ops.some(o=>norm(o.n)===norm(n))).map(([n,c])=>`<button data-idp="${n}" style="--c:${c}"><i></i>${n}</button>`).join('')}</div>`:''}
+   ${ed.k==='tam'&&!ed.ops.length?`<div class="cpal">${['P','M','G'].map(n=>`<button data-idp="${n}">${n}</button>`).join('')}</div>`:''}
+   <div class="idadd"><input data-idf="novo" value="${ed.novo||''}" placeholder="${ed.k==='cor'?'Outra cor: digite o nome':ed.k==='tam'?'Ex.: 4 mm, 1/4", Grande':'Ex.: Fenda, Phillips'}">${ed.k==='cor'?`<label class="csw" style="--c:${ed.novaCor||corDoNome(ed.novo||'',ed.ops.map(o=>o.c))}" title="Escolher a cor"><input type="color" data-idf="novaCor" value="${ed.novaCor||corDoNome(ed.novo||'',ed.ops.map(o=>o.c))}"></label>`:''}<button class="pill sm" data-ida>Adicionar</button></div>
+   ${cont?`<div class="idtot">Total: <b>${tot}</b> ${tot===1?'unidade':'unidades'}</div>`:''}`:''}</div>`;}
+/* lê os campos do editor para o estado; devolve true se tratou o clique (e o chamador redesenha) */
+export function identSync(ed,root){const v=sel=>root.querySelector(sel);if(v('[data-idf=nome]'))ed.nome=clean(v('[data-idf=nome]').value);if(v('[data-idf=novo]'))ed.novo=v('[data-idf=novo]').value;if(v('[data-idf=novaCor]')&&ed._corTocada)ed.novaCor=v('[data-idf=novaCor]').value;
+ root.querySelectorAll('[data-idnm]').forEach(i=>{const o=ed.ops[+i.dataset.idnm];if(o&&clean(i.value))o.n=clean(i.value);});root.querySelectorAll('[data-idc]').forEach(i=>{const o=ed.ops[+i.dataset.idc];if(o)o.c=i.value;});}
+export function identClick(ed,t,cont){const k=t.closest('[data-idk]');if(k){if(k.dataset.idk!==ed.k){ed.k=k.dataset.idk;ed.ops=[];ed.novo='';ed.novaCor='';}return true;}
+ const pp=t.closest('[data-idp]');if(pp){const n=pp.dataset.idp;ed.ops.push({n,c:ed.k==='cor'?(PALETA.find(z=>z[0]===n)||[0,corDoNome(n)])[1]:null,q:cont?1:0});return true;}
+ if(t.closest('[data-ida]'))return identAdd(ed,cont);
+ const q=t.closest('[data-idq]');if(q){const o=ed.ops[+q.dataset.idq];o.q=Math.max(0,(o.q||0)+(+q.dataset.d));return true;}
+ const x=t.closest('[data-idx]');if(x&&!x.disabled){ed.ops.splice(+x.dataset.idx,1);return true;}return false;}
+export function identAdd(ed,cont){const n=clean(ed.novo||'');if(!n)return false;if(ed.ops.some(o=>norm(o.n)===norm(n))){toast(`<b>${n}</b> já está na lista`,null,1600);return false;}
+ ed.ops.push({n,c:ed.k==='cor'?(ed.novaCor||corDoNome(n,ed.ops.map(o=>o.c))):null,q:cont?1:0});ed.novo='';ed.novaCor='';ed._corTocada=false;return true;}
+export const identFinal=ed=>ed.k&&ed.ops.length?{nome:ed.k==='outro'?(ed.nome||'Tipo'):IDNOME[ed.k],tipo:ed.k==='cor'?'cor':'texto',ops:ed.ops.map(o=>ed.k==='cor'?{n:o.n,c:o.c}:{n:o.n})}:null;
+
+/* ---------- editar cadastro (card próprio) ---------- */
+const SPECPH={Marca:'Ex.: Bosch',Medida:'Ex.: 10 mm',Potência:'Ex.: 60 W','Tipo (macho/fêmea)':'Ex.: macho',Especificação:'Ex.: 12 V, 2 A',Validade:'Ex.: 03/2027',Rendimento:'Ex.: 50 g',Dimensão:'Ex.: 100 × 1000 mm',Espessura:'Ex.: 3 mm',Faixa:'Até quanto mede. Ex.: 0–150 mm',Resolução:'Menor divisão. Ex.: 0,01 mm',Tamanho:'Ex.: M, 42',Tipos:'Ex.: M2, M3'};
+const SPECROT={Faixa:'Faixa de medição',Resolução:'Resolução (menor divisão)'};
+export function specsH(cl,spec,extra){const keys=[...new Set([...(SPECK[cl]||[]).filter(k=>k!=='Tipos'),...Object.keys(spec)])];
+ return `<div class="flbl">Especificações <span>(opcional)</span></div>${keys.map(k=>`<label>${SPECROT[k]||k}<input data-spec="${k}" value="${spec[k]||''}" placeholder="${SPECPH[k]||''}"></label>`).join('')}
+  ${extra.map((z,i)=>`<div class="row"><label>Campo<input data-sxk="${i}" value="${z[0]}" placeholder="Ex.: Cor do cabo"></label><label>Valor<input data-sxv="${i}" value="${z[1]}"></label></div>`).join('')}<button class="link" data-sxadd style="align-self:flex-start">+ outro campo</button>`;}
+export function openEdit(x,card){const it=IT(x.e);const usoDe=()=>{const u={};for(const y of allLoc())if(y.e.ref===it.id&&y.e.units)for(const z of y.e.units)if(z.v)u[z.v]=(u[z.v]||0)+1;return u;};
+ const ed={nome:it.nome,cl:it.cl,un:it.un,min:it.min,desc:it.desc||'',spec:{...(it.spec||{})},extra:[],id:identDe(it),units:(x.e.units||[]).map(u=>({...u,_u:u})),qtd:x.e.qtd,nivel:x.e.nivel,tipos:(x.e.tipos||[]).map(t=>t.n).join(', '),uso:usoDe()};
+ pushCard({t:'ed',f:card.f,p:card.p,o:card.o,x,ed});}
+export function editCardH(e){const x=e.x,it=IT(x.e),ed=e.ed;const nl=allLoc().filter(y=>y.e.ref===it.id).length;
+ const ops=ed.id.k?ed.id.ops:[];
+ return `<div class="form ef">${nl>1?`<div class="hint" style="margin:0 0 4px">O cadastro vale para os ${nl} lugares onde este item está. Quantidades e unidades abaixo são só deste lugar.</div>`:''}
+  <label>Nome<input data-ef="nome" value="${ed.nome}"></label>
+  <div class="flbl">Classe</div><div class="clc-grid">${Object.entries(CL).map(([k,v])=>`<button class="clc ${k===ed.cl?'on':''}" data-efcl="${k}">${clsH(k)}<span>${v.n}</span></button>`).join('')}</div>
+  <div class="hint">Controle: <b>${{unidades:'por unidade (patrimônio)',contavel:'por quantidade (consumível)',conjunto:'caixa ou kit (nível)'}[it.modo]}</b>. Para mudar o tipo de controle, cadastre o item de novo.</div>
+  ${it.modo==='contavel'?`<div class="row"><label>Unidade de medida<input data-ef="un" value="${ed.un}" placeholder="un., m, folhas, g"></label><label>Mínimo <span class="h">avisa abaixo disso</span><input data-ef="min" type="number" min="0" value="${ed.min}"></label></div>
+   <label>Quantidade neste lugar<span class="stp big"><button data-efq="-1">−</button><input data-ef="qtd" type="number" min="0" value="${ed.qtd}"><button data-efq="1">+</button></span></label>`:''}
+  ${it.modo==='conjunto'?`<label>Quanto tem neste lugar<div class="gsel">${NIVEIS.map((n,k)=>`<button data-efnv="${k}" class="${k===ed.nivel?'on':''}">${n}</button>`).join('')}</div></label><label>Tipos dentro <span class="h">separe por vírgula</span><input data-ef="tipos" value="${ed.tipos}" placeholder="Ex.: M2, M3, M4"></label>`:''}
+  ${it.modo==='unidades'?identH(ed.id,false,ed.uso)+`<div class="flbl">Unidades neste lugar <span>${ed.units.length}</span></div>
+   <div class="eunits">${ed.units.map((u,i)=>`<div class="eu"><b class="eun">#${u.n}</b>${ops.length?`<select data-euv="${i}" aria-label="${ed.id.k==='cor'?'Cor':'Opção'}"><option value="">—</option>${ops.map(o=>`<option ${o.n===u.v||o.o===u.v?'selected':''} value="${o.o||o.n}">${o.n}</option>`).join('')}</select>`:''}<select data-eue="${i}" aria-label="Estado">${Object.entries(ESTADOS).map(([k,[n]])=>`<option value="${k}" ${k===u.estado?'selected':''}>${n}</option>`).join('')}</select><span class="eue">${u.emp?`com ${u.emp.para}`:''}</span><button class="idx" data-eux="${i}" title="Dar baixa nesta unidade">×</button></div>`).join('')||'<div class="hint">Nenhuma unidade aqui.</div>'}</div>
+   <button class="link" data-euadd style="align-self:flex-start">+ unidade</button>`:''}
+  ${specsH(ed.cl,ed.spec,ed.extra)}
+  <label>Descrição<textarea data-ef="desc" rows="2" placeholder="Para que serve, cuidados, de quem é…">${ed.desc}</textarea></label></div>
+  <div class="mf stick"><button class="pill" data-b="back">Cancelar</button><button class="pill pri" data-efsave>Salvar alterações</button></div>`;}
+export function editSync(e){const ed=e.ed,r=e.el;const g=k=>r.querySelector(`[data-ef="${k}"]`);
+ if(g('nome'))ed.nome=g('nome').value;if(g('un'))ed.un=g('un').value;if(g('min'))ed.min=Math.max(0,+g('min').value||0);if(g('qtd'))ed.qtd=Math.max(0,Math.round(+g('qtd').value||0));if(g('desc'))ed.desc=g('desc').value;if(g('tipos'))ed.tipos=g('tipos').value;
+ r.querySelectorAll('[data-spec]').forEach(i=>ed.spec[i.dataset.spec]=i.value);r.querySelectorAll('[data-sxk]').forEach(i=>ed.extra[+i.dataset.sxk][0]=i.value);r.querySelectorAll('[data-sxv]').forEach(i=>ed.extra[+i.dataset.sxv][1]=i.value);
+ r.querySelectorAll('[data-euv]').forEach(i=>{const u=ed.units[+i.dataset.euv];const o=ed.id.ops.find(o=>(o.o||o.n)===i.value);u.v=o?(o.o||o.n):null;});r.querySelectorAll('[data-eue]').forEach(i=>ed.units[+i.dataset.eue].estado=i.value);
+ identSync(ed.id,r);}
+export function editClick(e,t){const ed=e.ed;if(!t.closest('input,textarea,select'))editSync(e);let re=false;
+ if(identClick(ed.id,t,false))re=true;
+ const cl=t.closest('[data-efcl]');if(cl){ed.cl=cl.dataset.efcl;re=true;}
+ const q=t.closest('[data-efq]');if(q){ed.qtd=Math.max(0,ed.qtd+(+q.dataset.efq));re=true;}
+ const nv=t.closest('[data-efnv]');if(nv){ed.nivel=+nv.dataset.efnv;re=true;}
+ if(t.closest('[data-sxadd]')){ed.extra.push(['','']);re=true;}
+ const ux=t.closest('[data-eux]');if(ux){ed.units.splice(+ux.dataset.eux,1);re=true;}
+ if(t.closest('[data-euadd]')){const n=Math.max(0,...allLoc().filter(y=>y.e.ref===e.x.e.ref&&y.e.units).flatMap(y=>y.e.units.map(u=>u.n)),...ed.units.map(u=>u.n))+1;ed.units.push({n,estado:'boa',emp:null,v:null,id:null});re=true;}
+ if(t.closest('[data-efsave]'))return editSave(e);
+ if(re){const sc=e.el.querySelector('.sb').scrollTop;renderCard(e);e.el.querySelector('.sb').scrollTop=sc;}return re;}
+export function editSave(e){editSync(e);const ed=e.ed,x=e.x,it=IT(x.e);const nome=clean(ed.nome);if(!nome){toast('O item precisa de um nome',null,1800);return true;}
+ const mud=[];if(nome!==it.nome)mud.push('nome');it.nome=nome;if(ed.cl!==it.cl)mud.push('classe');it.cl=ed.cl;it.desc=clean(ed.desc);
+ if(it.modo==='contavel'){it.un=clean(ed.un)||'un.';it.min=ed.min;if(x.e.qtd!==ed.qtd){mud.push(`quantidade ${x.e.qtd} → ${ed.qtd}`);x.e.qtd=ed.qtd;}}
+ if(it.modo==='conjunto'){if(x.e.nivel!==ed.nivel)mud.push(NIVEIS[ed.nivel].toLowerCase());x.e.nivel=ed.nivel;const ant=new Map((x.e.tipos||[]).map(t=>[norm(t.n),t]));x.e.tipos=ed.tipos.split(',').map(z=>clean(z)).filter(Boolean).map(n=>ant.get(norm(n))||{n});}
+ const spec={};for(const [k,v] of Object.entries(ed.spec))if(clean(v))spec[k]=clean(v);for(const [k,v] of ed.extra)if(clean(k)&&clean(v))spec[clean(k)]=clean(v);it.spec=spec;
+ if(it.modo==='unidades'){const novo=identFinal(ed.id);const ren={};for(const o of ed.id.ops)if(o.o&&o.o!==o.n)ren[o.o]=o.n;
+  for(const y of allLoc())if(y.e.ref===it.id&&y.e.units&&y.e!==x.e)for(const u of y.e.units)if(u.v&&ren[u.v])u.v=ren[u.v];
+  if(novo)it.ident=novo;else delete it.ident;
+  const antes=x.e.units;x.e.units=ed.units.map(u=>{const base=u._u||U(u.n,'boa');base.estado=u.estado;base.v=u.v?(ren[u.v]||u.v):null;return base;});
+  const tir=antes.filter(u=>!x.e.units.includes(u));if(tir.length)mud.push(`baixa de ${tir.length} unidade(s)`);const nov=x.e.units.filter(u=>!antes.includes(u)).length;if(nov)mud.push(`${nov} unidade(s) nova(s)`);}
+ touch(x.e);log(`Cadastro editado: ${it.nome}${mud.length?' ('+mud.join(', ')+')':''}`,it.id);
+ if(it.modo==='unidades'&&!x.e.units.length){removeEntry(x);}
+ popTo(S.stack.indexOf(e)-1);refreshCards();F.forEach(f=>f.d.partes.forEach(p=>buildContents(f,p.id)));toast('Alterações salvas',null,1600);return true;}
 export function rerenderRow(e){document.querySelectorAll(`.irow[data-item="${e.id}"]`).forEach(r=>{const card=S.stack.find(s=>s.el.contains(r));const n=document.createElement('div');n.innerHTML=itemH(e,card,{path:r.querySelector('.nm small')?.textContent});r.replaceWith(n.firstElementChild);});refreshHero();refreshBadges();if(S.vist)renderVist();}
-export function refreshHero(){S.stack.forEach(s=>{if(s.t==='i')return;const h=s.el.querySelector('.sb>.hero');if(h){const n=document.createElement('div');n.innerHTML=heroH(nodeOf(s));h.replaceWith(n.firstElementChild);}});}
+export function refreshHero(){S.stack.forEach(s=>{if(s.t==='i'||s.t==='ed')return;const h=s.el.querySelector('.sb>.hero');if(h){const n=document.createElement('div');n.innerHTML=heroH(nodeOf(s));h.replaceWith(n.firstElementChild);}});}
 export function rebuildAt(x){if(!x||x.sem)return;buildContents(byId(x.m.id),x.p.id);}
 
 /* --------- móveis dentro de móveis --------- */
@@ -130,7 +222,7 @@ export function encaixeH(f){let h='';const hs=f.host;const mv=f.d.movel;
 export function filhosH(f,pid){const fs=(f.filhos||[]).filter(x=>pid==null?true:x.pid===pid);if(!fs.length)return '';
  return `<div class="grp">${pid==null?'Móveis encaixados':'Neste espaço'}</div><div class="filhos">${fs.map(x=>`<button class="filho" data-b="vai" data-push="1" data-id="${x.f.d.id}"><span class="fn">${x.f.d.nome}</span><span class="fw">${pid==null&&x.pid&&f.d.partes.find(p=>p.id===x.pid)?partName(f.d,f.d.partes.find(p=>p.id===x.pid)):''}</span>${IC.next}</button>`).join('')}</div>`;}
 /* --------- cliques nos cards --------- */
-export function handleCard(ev,e){const t=ev.target;const tag=t.closest('[data-tag]');if(tag)return tagPop(tag);
+export function handleCard(ev,e){const t=ev.target;if(e.t==='ed'&&!t.closest('[data-b=back]')&&editClick(e,t))return;const tag=t.closest('[data-tag]');if(tag)return tagPop(tag);
  const oc_=t.closest('[data-ocor]');if(oc_&&e.t==='o'){if(!can())return;e.o.cor=oc_.dataset.ocor;log(`${orgName(e.o)}: cor alterada`);buildContents(e.f,e.p.id);orgOpen(e.f,e.p.id,e.o.id,1);refreshCards();return;}
  const goto=t.closest('[data-goto]');if(goto){const p=e.f.d.partes.find(x=>x.id===goto.dataset.goto);replaceTop({t:'p',f:e.f,p});return;}
  const b=t.closest('[data-b]');if(b){const a=b.dataset.b;
@@ -141,6 +233,7 @@ export function handleCard(ev,e){const t=ev.target;const tag=t.closest('[data-ta
   if(a==='pprev'||a==='pnext'){const ps=visParts(e.f,false);let i=ps.indexOf(e.p);i=(i+(a==='pnext'?1:-1)+ps.length)%ps.length;replaceTop({t:'p',f:e.f,p:ps[i]});return;}
   if(a==='cheia'){e.p.cheia=!e.p.cheia;log(`${partName(e.f.d,e.p)} (${e.f.d.nome}) marcada como ${e.p.cheia?'cheia':'com espaço'}`);renderCard(e);return;}
   if(a==='ren')return renameInline(e);
+  if(a==='editar'&&e.t==='i'){if(!can())return;return openEdit(e.x,e);}
   if(a==='addi')return openItemCreator({dest:{f:e.f,p:e.p,o:e.t==='o'?e.o:null}});
   if(a==='addo')return openOrgCreator({dest:{f:e.f,p:e.p}});
   if(a==='moveorg')return startCarry({kind:'org',x:{m:e.f.d,p:e.p,o:e.o}});
@@ -153,6 +246,9 @@ export function handleCard(ev,e){const t=ev.target;const tag=t.closest('[data-ta
  const act=t.closest('[data-act]');if(act)return entryAct(x,act.dataset.act,act,row);
  if(t.closest('input,textarea,select,.form'))return;
  S.openRow=S.openRow===x.e.id?null:x.e.id;document.querySelectorAll('.irow.open').forEach(r=>{if(r!==row)r.classList.remove('open');});row.classList.toggle('open',S.openRow===x.e.id);}
+stackEl.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.matches('[data-idf=novo]')){const e=S.stack.find(z=>z.el.contains(ev.target));if(e&&e.t==='ed'){ev.preventDefault();editSync(e);if(identAdd(e.ed.id,false)){renderCard(e);const n=e.el.querySelector('[data-idf=novo]');n&&n.focus();}}}});
+stackEl.addEventListener('input',ev=>{const t=ev.target;if(t.matches('[data-idc],[data-idf=novaCor]')){t.parentElement.style.setProperty('--c',t.value);const e=S.stack.find(z=>z.el.contains(t));if(e&&e.t==='ed'&&t.matches('[data-idf=novaCor]')){e.ed.id._corTocada=true;e.ed.id.novaCor=t.value;}}
+ if(t.matches('[data-ef=nome]')){const e=S.stack.find(z=>z.el.contains(t));const h=e&&e.el.querySelector('.sh h3');if(h&&h.lastChild&&h.lastChild.nodeType===3)h.lastChild.textContent=t.value;}});
 stackEl.addEventListener('change',ev=>{if(ev.target.classList.contains('obs')){const e=S.stack.find(s=>s.el.contains(ev.target));if(e&&e.t==='i'){IT(e.x.e).obs=clean(ev.target.value);log(`Observação editada em ${IT(e.x.e).nome}`,e.x.e.ref);toast('Observação salva',null,1500);}}});
 export function replaceTop(n){const top=S.stack[S.stack.length-1];if(top.t==='o')orgOpen(top.f,top.p.id,top.o.id,0);const i=S.stack.length-1;const old=top.el;
  S.stack.pop();old.classList.add('leave');setTimeout(()=>old.remove(),300);pushCard(n);}
@@ -177,17 +273,18 @@ export function entryAct(x,a,el,row){if(!can())return;const e=x.e,it=IT(e);
  if(a==='unit')return unitPop(x,e.units.find(u=>u.n===+el.dataset.u),el);
  if(a==='addunit'){const add=v=>{const n=Math.max(0,...allLoc().filter(y=>y.e.ref===e.ref&&y.e.units).flatMap(y=>y.e.units.map(u=>u.n)))+1;e.units.push(U(n,'boa',null,v));touch(e);log(`${it.nome}: unidade ${n}${v?' ('+v+')':''} registrada`,it.id);closePop();rerenderRow(e);rebuildAt(x);stampUnit(e,{n});};
   if(!it.ident)return add(null);
-  pop.innerHTML=`<div class="tl">Nova unidade · ${it.ident.nome}</div>${it.ident.ops.map((o,k)=>`<button class="it" data-v="${k}">${o.c?`<span class="dot" style="--sc:${o.c};background:${o.c}"></span>`:''}${o.n}</button>`).join('')}<div style="padding:2px 6px 6px;display:flex;gap:6px"><input id="newOp" placeholder="Outra opção"><button class="pill sm pri" data-v="new">Criar</button></div>`;
-  placePop(el);pop.onclick=ev=>{const b=ev.target.closest('[data-v]');if(!b)return;if(b.dataset.v==='new'){const t=clean(pop.querySelector('#newOp').value);if(!t)return;if(!identOp(it,t))it.ident.ops.push(it.ident.tipo==='cor'?{n:t,c:OCOL[it.ident.ops.length%OCOL.length]}:{n:t});return add(t);}add(it.ident.ops[+b.dataset.v].n);};return;}
- if(a==='ecancel'){e._edit=false;rerenderRow(e);return;}
- if(a==='esave'){const f=row.querySelector('[data-edit]');it.nome=clean(f.querySelector('[name=nome]').value)||it.nome;const cl=f.querySelector('[name=cl]').value;if(cl!==it.cl){it.cl=cl;}
-  const un=f.querySelector('[name=un]');if(un){it.un=clean(un.value);it.min=+f.querySelector('[name=min]').value||0;}it.desc=clean(f.querySelector('[name=desc]').value);
-  f.querySelectorAll('[data-spec]').forEach(i=>{if(clean(i.value))it.spec[i.dataset.spec]=clean(i.value);else delete it.spec[i.dataset.spec];});
-  e._edit=false;log(`Cadastro editado: ${it.nome}`,it.id);refreshCards();F.forEach(f=>f.d.partes.forEach(p=>buildContents(f,p.id)));toast('Alterações salvas',null,1600);return;}}
+  const cor=it.ident.tipo==='cor';
+  pop.innerHTML=`<div class="tl">Nova unidade · qual ${it.ident.nome.toLowerCase()}?</div><div class="popl">${it.ident.ops.map((o,k)=>`<button class="it" data-v="${k}">${o.c?`<span class="dot" style="--sc:${o.c};background:${o.c}"></span>`:''}${o.n}</button>`).join('')}<button class="it muted" data-v="none">Sem ${it.ident.nome.toLowerCase()}</button></div>
+   <div class="tl">Ou uma opção nova</div><div class="popadd"><input id="newOp" placeholder="${cor?'Nome da cor':'Ex.: '+(norm(it.ident.nome)==='tamanho'?'6 mm':'Phillips')}">${cor?`<label class="csw" id="newSw" style="--c:#C8553D" title="Escolher a cor"><input type="color" id="newCor" value="#C8553D"></label>`:''}<button class="pill sm pri" data-v="new">Criar</button></div>`;
+  placePop(el);const ni=pop.querySelector('#newOp'),nc=pop.querySelector('#newCor');let tocou=false;
+  if(cor){const upd=()=>{if(!tocou){nc.value=corDoNome(ni.value,it.ident.ops.map(o=>o.c));}pop.querySelector('#newSw').style.setProperty('--c',nc.value);};ni.oninput=upd;nc.oninput=()=>{tocou=true;upd();};upd();}
+  ni.onkeydown=ev=>{if(ev.key==='Enter')pop.querySelector('[data-v=new]').click();};
+  pop.onclick=ev=>{const b=ev.target.closest('[data-v]');if(!b)return;if(b.dataset.v==='none')return add(null);if(b.dataset.v==='new'){const t=clean(ni.value);if(!t)return ni.focus();const ja=identOp(it,t)||it.ident.ops.find(o=>norm(o.n)===norm(t));if(!ja)it.ident.ops.push(cor?{n:t,c:nc.value}:{n:t});return add(ja?ja.n:t);}add(it.ident.ops[+b.dataset.v].n);};return;}
+}
 export function itemAction(x,a,card){const e=x.e,it=IT(e);
  if(a==='det')return pushCard({t:'i',f:card.f,p:card.p,o:card.o,x});
  if(!can())return;
- if(a==='edit'){e._edit=!e._edit;rerenderRow(e);return;}
+ if(a==='edit')return openEdit(x,card);
  if(a==='mov')return startCarry({kind:'entry',x});
  if(a==='rm')return openRemove(x);
  if(a==='nf'){e.nf=!e.nf;touch(e);log(`${it.nome}: ${e.nf?'não encontrado':'encontrado'} em ${pathOf(x)}`,e.ref);rerenderRow(e);rebuildAt(x);
@@ -199,12 +296,12 @@ export const pop=$('#pop');
 export function placePop(el){const r=relRect(el);pop.classList.add('on');const w=pop.offsetWidth,h=pop.offsetHeight;let x=r.x+r.w/2-w/2,y=r.y+r.h+8;
  x=Math.max(8,Math.min(x,app.clientWidth-w-8));if(y+h>app.clientHeight-8)y=r.y-h-8;pop.style.left=x+'px';pop.style.top=Math.max(8,y)+'px';}
 export function closePop(){pop.classList.remove('on');}
-export function unitPop(x,u,el){const it=IT(x.e);pop.innerHTML=`<div class="tl">${it.nome} · unidade ${u.n}</div>${it.ident?`<div class="vsel">${it.ident.ops.map((o,k)=>`<button data-sv="${k}" class="${o.n===u.v?'on':''}">${o.c?`<i style="background:${o.c}"></i>`:''}${o.n}</button>`).join('')}</div>`:''}${Object.entries(ESTADOS).map(([k,[n,c]])=>`<button class="it" data-s="${k}"><span class="dot" style="--sc:${c}"></span>${n}${u.estado===k?' ✓':''}</button>`).join('')}
+export function unitPop(x,u,el){const it=IT(x.e);pop.innerHTML=`<div class="tl">${it.nome} · unidade ${u.n}</div>${it.ident?`<div class="tl sub">${it.ident.nome}</div><div class="vsel">${it.ident.ops.map((o,k)=>`<button data-sv="${k}" class="${o.n===u.v?'on':''}">${o.c?`<i style="background:${o.c}"></i>`:''}${o.n}</button>`).join('')}</div>`:''}${Object.entries(ESTADOS).map(([k,[n,c]])=>`<button class="it" data-s="${k}"><span class="dot" style="--sc:${c}"></span>${n}${u.estado===k?' ✓':''}</button>`).join('')}
  <div class="tl">${u.emp?'Com '+u.emp.para:'Ações'}</div>${u.emp?`<button class="it" data-s="dev">${IC.in}Devolver</button>`:`<button class="it" data-s="emp">${IC.hand}Emprestar…</button>`}
- <button class="it" data-s="mov">${IC.move}Mudar esta unidade de lugar</button><button class="it" data-s="baixa">${IC.trash}Dar baixa</button>`;
+ <button class="it" data-s="mov">${IC.move}Mudar esta unidade de lugar</button><button class="it" data-s="ed">${IC.edit}Editar unidades e opções…</button><button class="it" data-s="baixa">${IC.trash}Dar baixa</button>`;
  placePop(el);pop.onclick=ev=>{const sv=ev.target.closest('[data-sv]');if(sv&&can()){u.v=it.ident.ops[+sv.dataset.sv].n;touch(x.e);log(`${it.nome}: unidade ${u.n} é ${u.v}`,it.id);closePop();rerenderRow(x.e);stampUnit(x.e,u);return;}
   const b=ev.target.closest('[data-s]');if(!b||!can())return;const s=b.dataset.s;closePop();
-  if(s==='emp')return openLoan(x,u);if(s==='dev')return devolver(x,u,false);if(s==='mov')return startCarry({kind:'unit',x,u});
+  if(s==='emp')return openLoan(x,u);if(s==='dev')return devolver(x,u,false);if(s==='ed'){const card=S.stack.find(z=>z.el.contains(el))||S.stack[S.stack.length-1];return openEdit(x,card);}if(s==='mov')return startCarry({kind:'unit',x,u});
   if(s==='baixa'){const i=x.e.units.indexOf(u);x.e.units.splice(i,1);log(`${it.nome}: baixa da unidade ${u.n}`,it.id);const rm=!x.e.units.length;if(rm)removeEntry(x);refreshCards();rebuildAt(x);
    toast(`Baixa da unidade ${u.n} de <b>${it.nome}</b>`,()=>{if(rm)restoreEntry(x);x.e.units.splice(i,0,u);refreshCards();rebuildAt(x);});return;}
   u.estado=s;touch(x.e);log(`${it.nome}: unidade ${u.n} ${ESTADOS[s][0].toLowerCase()}`,it.id);rerenderRow(x.e);stampUnit(x.e,u);};}
@@ -227,15 +324,16 @@ export const modalEl=$('#modal');
 export function modal(h,wide){modalEl.className='ui modal glass'+(wide?' wide':'');modalEl.innerHTML=h;requestAnimationFrame(()=>modalEl.classList.add('on'));$('#scrim').classList.add('on');}
 export function closeModal(){modalEl.classList.remove('on');if(!S.pal)$('#scrim').classList.remove('on');}
 modalEl.addEventListener('click',ev=>{if(ev.target.closest('[data-mclose]'))closeModal();});
-export function openLoan(x,unit){const it=IT(x.e);const avail=x.e.units.filter(u=>!u.emp);if(!avail.length)return toast('Nenhuma unidade disponível para emprestar');let u=unit||avail[0];let tipo='equipe',para='';
+export function openLoan(x,unit){const it=IT(x.e);const avail=x.e.units.filter(u=>!u.emp);if(!avail.length)return toast('Nenhuma unidade disponível para emprestar');let u=unit||avail[0];let tipo='equipe',para='',prazo='';
  const render=()=>{modal(`<h4>Emprestar ${it.nome}</h4><div style="color:var(--ink2);font-size:.86rem">Só para quando alguém leva para fora do laboratório. Uso no dia a dia não precisa ser registrado.</div>
   <div class="form"><label>Unidade<div class="units">${avail.map(a=>`<button class="uc ${a===u?'':''}" data-lu="${a.n}" style="--sc:${a===u?'#0077C8':ESTADOS[a.estado][1]};${a===u?'background:#0077C8;color:#fff':''}">${a.n}</button>`).join('')}</div></label>
   <label>Para<div class="gsel">${Object.entries(TIPOEMP).map(([k,v])=>`<button data-lt="${k}" class="${k===tipo?'on':''}">${v}</button>`).join('')}</div></label>
-  ${tipo==='equipe'?`<div class="units">${PESSOAS.map(p=>`<button class="pill sm ${p===para?'pri':''}" data-lp="${p}">${p}</button>`).join('')}</div>`:`<label>Nome<input id="lname" value="${para}" placeholder="${tipo==='externa'?'Ex.: Equipe Uai!rbus':'Ex.: Departamento de Mecânica'}"></label>`}</div>
+  ${tipo==='equipe'?`${PESSOAS.length?`<div class="units">${PESSOAS.map(p=>`<button class="pill sm ${p===para?'pri':''}" data-lp="${p}">${p}</button>`).join('')}</div>`:''}<label>${PESSOAS.length?'Ou digite o nome':'Nome de quem leva'}<input id="lname" value="${PESSOAS.includes(para)?'':para}" placeholder="Ex.: Ana, Pedro"></label>`:`<label>Nome<input id="lname" value="${para}" placeholder="${tipo==='externa'?'Ex.: Equipe Uai!rbus':'Ex.: Departamento de Mecânica'}"></label>`}
+  <label>Devolver até <span class="h">opcional · avisamos quando passar</span><input id="lprazo" type="date" value="${prazo}" min="${new Date().toISOString().slice(0,10)}"></label></div>
   <div class="mf"><button class="pill" data-mclose>Cancelar</button><button class="pill pri" data-lok ${para?'':'disabled'}>${IC.hand}Emprestar</button></div>`);
   modalEl.onclick=ev=>{const t=ev.target;if(t.closest('[data-mclose]'))return closeModal();const lu=t.closest('[data-lu]');if(lu){u=avail.find(a=>a.n===+lu.dataset.lu);render();return;}
-   const lt=t.closest('[data-lt]');if(lt){tipo=lt.dataset.lt;para='';render();return;}const lp=t.closest('[data-lp]');if(lp){para=lp.dataset.lp;render();return;}
-   if(t.closest('[data-lok]')){u.emp={para,tipo,desde:Date.now()};touch(x.e);log(`${it.nome} #${u.n} emprestado para ${para} (${TIPOEMP[tipo].toLowerCase()})`,it.id);closeModal();rerenderRow(x.e);stampUnit(x.e,u);toast(`<b>${it.nome} #${u.n}</b> com ${para}. Aparece em Guardar › Devolver.`);}};
+   const keep=()=>{const pz=modalEl.querySelector('#lprazo');if(pz)prazo=pz.value;};const lt=t.closest('[data-lt]');if(lt){keep();tipo=lt.dataset.lt;para='';render();return;}const lp=t.closest('[data-lp]');if(lp){keep();para=lp.dataset.lp;render();return;}
+   if(t.closest('[data-lok]')){const pz=modalEl.querySelector('#lprazo').value;u.emp={para,tipo,desde:Date.now(),...(pz?{prazo:new Date(pz+'T23:59').getTime()}:{})};touch(x.e);log(`${it.nome} #${u.n} emprestado para ${para} (${TIPOEMP[tipo].toLowerCase()})`,it.id);closeModal();rerenderRow(x.e);stampUnit(x.e,u);toast(`<b>${it.nome} #${u.n}</b> com ${para}. Aparece em Guardar › Devolver.`);}};
   const ln=modalEl.querySelector('#lname');if(ln){ln.oninput=()=>{para=clean(ln.value);modalEl.querySelector('[data-lok]').disabled=!para;};ln.focus();ln.setSelectionRange(99,99);}};render();}
 export function removeEntry(x){const arr=x.sem?SEM.itens:x.o?x.o.itens:x.p.itens;x._i=arr.indexOf(x.e);arr.splice(x._i,1);}
 export function restoreEntry(x){const arr=x.sem?SEM.itens:x.o?x.o.itens:x.p.itens;arr.splice(x._i??arr.length,0,x.e);}
@@ -273,8 +371,8 @@ export function closePalette(instant){if(!S.pal)return;S.pal=null;$('#scrim').cl
   setTimeout(()=>{if(!S.pal){pal.style.display='none';pal.style.opacity='';pal.classList.remove('closing');}},330);},90);}
 export const itemIll=`<svg viewBox="0 0 56 48" width="56" height="48"><ellipse cx="28" cy="40" rx="16" ry="5" fill="#E07A1F" opacity=".55"/><circle cx="28" cy="22" r="15" fill="#E07A1F"/><g transform="translate(18 12) scale(.85)" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${P.wrench}</g></svg>`;
 export const orgIll=()=>`<svg viewBox="0 0 44 38" width="56" height="48">${orgIso('tampa','#E0B12E').replace(/^<svg[^>]*>|<\/svg>$/g,'')}</svg>`;
-export const tilesH=dest=>`<div class="tiles"><button class="tile" data-g="newitem"><span class="ill">${itemIll}<span class="plus">+</span></span><span><b>Novo item</b><small>${dest?'Cadastrar e guardar aqui':'Cadastrar e escolher onde guardar'}</small></span></button>
- <button class="tile" data-g="neworg" ${dest&&!dest.p?'':''}><span class="ill">${orgIll()}<span class="plus">+</span></span><span><b>Novo organizador</b><small>Caixa, maleta, gaveteiro…</small></span></button></div>`;
+export const tilesH=dest=>`<div class="dtiles"><button class="dtile" data-g="newitem"><span class="ill">${itemIll}<span class="plus">+</span></span><span><b>Novo item</b><small>${dest?'Cadastrar e guardar aqui':'Cadastrar e escolher onde guardar'}</small></span></button>
+ <button class="dtile" data-g="neworg" ${dest&&!dest.p?'':''}><span class="ill">${orgIll()}<span class="plus">+</span></span><span><b>Novo organizador</b><small>Caixa, maleta, gaveteiro…</small></span></button></div>`;
 export function loansAll(){const r=[];for(const x of allLoc())if(IT(x.e).modo==='unidades')x.e.units.forEach(u=>{if(u.emp)r.push({x,u});});return r.sort((a,b)=>a.u.emp.desde-b.u.emp.desde);}
 export const crH=(x,k)=>`<div class="cr" data-gk="${k}" data-e="${x.e.id}">${clsH(IT(x.e).cl,'sm')}<div><div class="t">${IT(x.e).nome}</div><div class="p">${pathOf(x)}</div></div></div>`;
 export function renderPal(){const mode=S.pal.mode;
@@ -320,46 +418,53 @@ $('#pres').addEventListener('click',ev=>{const t=ev.target;if(!S.pal)return;cons
 $('#scrim').onclick=()=>{if(modalEl.classList.contains('on'))return closeModal();closePalette();};
 
 /* ================= criar item ================= */
-export function openItemCreator(opt={}){const IOPS={cor:[['Amarelo','#E0B12E'],['Vermelho','#C8553D'],['Azul','#3E7CB1'],['Verde','#4C9A6A'],['Laranja','#E07A1F'],['Roxo','#8E5BD0'],['Preto','#2b3138'],['Cinza','#7A8794']],tam:[['Pequena'],['Média'],['Grande']]};
- const st={ik:'',inome:'',iops:'',iq:{},nome:opt.nome||'',cl:sugCl(opt.nome||''),manual:false,modo:null,q:1,un:'un.',min:0,nivel:2,tipos:'',desc:'',spec:{}};
- const iopts=()=>st.ik==='outro'?[...new Set(st.iops.split(',').map(s=>clean(s)).filter(Boolean))].map(n=>[n]):(IOPS[st.ik]||[]);
- const itot=()=>iopts().reduce((a,[n])=>a+(st.iq[n]||0),0);
- const identH=()=>`<label>Identificador das unidades <span style="font-weight:500;color:var(--ink3)">o que diferencia uma unidade da outra</span><div class="gsel">${[['','Nenhum'],['cor','Cor'],['tam','Tamanho'],['outro','Outro']].map(([k,v])=>`<button data-ik="${k}" class="${k===st.ik?'on':''}">${v}</button>`).join('')}</div></label>
-  ${st.ik==='outro'?`<div class="row"><label>Nome<input id="cin" value="${st.inome}" placeholder="Ex.: Ponta"></label><label>Opções (separe por vírgula)<input id="cio" value="${st.iops}" placeholder="Ex.: Fenda, Phillips"></label></div>`:''}
-  ${st.ik?`<div class="vsel big">${iopts().map(([n,c])=>`<span class="${st.iq[n]?'on':''}"><button data-iv="${n}">${c?`<i style="background:${c}"></i>`:''}${n}<b>${st.iq[n]||0}</b></button>${st.iq[n]?`<button data-ivm="${n}" aria-label="Tirar uma">−</button>`:''}</span>`).join('')||'<span style="color:var(--ink3);font-size:.8rem">Digite as opções acima.</span>'}</div><div style="font-size:.76rem;color:var(--ink3)">Toque numa opção para cada unidade que existe.</div>`:''}`;
- const render=()=>{const cl=st.cl||'div';const modo=st.modo||CL[cl].m;const keys=SPECK[cl]||[];const d=opt.dest;
-  modal(`<h4>Novo item</h4><div style="color:var(--ink2);font-size:.86rem">${d?`Vai direto para <b>${d.o?orgName(d.o):partName(d.f.d,d.p)}</b>.`:'Depois do cadastro você escolhe onde guardar, no 3D.'}</div>
+export function openItemCreator(opt={}){
+ const st={nome:opt.nome||'',cl:sugCl(opt.nome||''),manual:false,modo:null,q:1,un:'un.',min:0,nivel:2,tipos:'',desc:'',spec:{},extra:[],id:{k:'',nome:'',ops:[],novo:''},more:false};
+ const modoDe=()=>st.modo||CL[st.cl||'div'].m;
+ const total=()=>modoDe()==='unidades'&&st.id.k&&st.id.ops.length?st.id.ops.reduce((a,o)=>a+(o.q||0),0):st.q;
+ const render=()=>{const cl=st.cl||'div';const modo=modoDe();const d=opt.dest;const tot=total();const okU=modo!=='unidades'||tot>0;
+  modal(`<h4>Novo item</h4><div class="msub">${d?`Vai direto para <b>${d.o?orgName(d.o):partName(d.f.d,d.p)}</b>.`:'Depois do cadastro você escolhe onde guardar, no 3D.'}</div>
   <div class="form"><label>Nome<input id="cn" value="${st.nome}" placeholder="Ex.: Broca 4 mm, Cola epóxi, Conector XT60"></label>
-   <label>Classe <span style="font-weight:500;color:var(--ink3)">${st.cl?CL[st.cl].n+(st.manual?'':' (sugerida pelo nome)'):'escolha ou digite o nome'}</span><div class="clsrow" style="gap:6px">${Object.keys(CL).map(c=>`<span data-ccl="${c}" style="cursor:pointer;opacity:${c===st.cl?1:.4};${c===st.cl?'outline:2px solid var(--ink);outline-offset:2px;border-radius:13px':''}">${clsH(c)}</span>`).join('')}</div></label>
-   <label>Como controlar<div class="gsel">${[['unidades','Por unidade (patrimônio)'],['contavel','Por quantidade (consumível)'],['conjunto','Item de conjunto (caixa, kit)']].map(([k,v])=>`<button data-cm="${k}" class="${k===modo?'on':''}">${v}</button>`).join('')}</div></label>
-   ${modo==='conjunto'?`<div class="row"><label>Quão cheio<div class="gsel">${NIVEIS.map((n,k)=>`<button data-cnv="${k}" class="${k===st.nivel?'on':''}">${n}</button>`).join('')}</div></label></div><label>Tipos (separe por vírgula)<input id="ctp" value="${st.tipos}" placeholder="Ex.: M2, M3, M4"></label>`
-   :`<div class="row"><label>${modo==='unidades'?'Unidades':'Quantidade'}<span class="rc" style="margin:2px 0 0"><button data-cq="-">−</button><b style="font:600 1.3rem var(--cond);min-width:34px;text-align:center">${modo==='unidades'&&st.ik?itot():st.q}</b><button data-cq="+">+</button></span></label>${modo==='contavel'?`<label>Unidade<input id="cu" value="${st.un}"></label><label>Mínimo<input id="cmn" type="number" value="${st.min}"></label>`:''}</div>${modo==='unidades'?identH():''}`}
-   ${keys.filter(k=>k!=='Tipos').map(k=>`<label>${k}<input data-cs="${k}" value="${st.spec[k]||''}"></label>`).join('')}<label>Descrição<textarea id="cd" rows="2">${st.desc}</textarea></label></div>
-  <div class="mf"><button class="pill" data-mclose>Cancelar</button>${d?`<button class="pill pri" data-cok="here">${IC.in}Criar e guardar aqui</button>`:`<button class="pill" data-cok="sem">Criar sem lugar</button><button class="pill pri" data-cok="place">${IC.loc}Criar e escolher lugar</button>`}</div>`);
-  const cio=modalEl.querySelector('#cio');if(cio)cio.onchange=()=>{sync();render();};
-  const cn=modalEl.querySelector('#cn');if(!st.ik){cn.focus();cn.setSelectionRange(99,99);}
-  cn.oninput=()=>{st.nome=cn.value;if(!st.manual){const s=sugCl(cn.value);if(s!==st.cl){st.cl=s;st.modo=null;sync();render();}}};};
- const sync=()=>{const g=id=>modalEl.querySelector(id);if(g('#cn'))st.nome=g('#cn').value;if(g('#cu'))st.un=g('#cu').value;if(g('#cmn'))st.min=+g('#cmn').value||0;if(g('#cd'))st.desc=g('#cd').value;if(g('#ctp'))st.tipos=g('#ctp').value;if(g('#cin'))st.inome=clean(g('#cin').value);if(g('#cio'))st.iops=g('#cio').value;
-  modalEl.querySelectorAll('[data-cs]').forEach(i=>st.spec[i.dataset.cs]=i.value);};
+   <div class="flbl">Classe <span>${st.cl&&!st.manual&&st.nome?'sugerida pelo nome · toque para trocar':'toque para escolher'}</span></div>
+   <div class="clc-grid">${Object.entries(CL).map(([k,v])=>`<button class="clc ${k===st.cl?'on':''}" data-ccl="${k}">${clsH(k)}<span>${v.n}</span></button>`).join('')}</div>
+   <div class="flbl">Como controlar</div><div class="gsel wrap">${[['unidades','Por unidade','cada uma tem número (ferramentas, instrumentos)'],['contavel','Por quantidade','conta quanto tem (consumíveis)'],['conjunto','Caixa ou kit','só o nível: vazio a cheio']].map(([k,v,h])=>`<button data-cm="${k}" class="${k===modo?'on':''}"><b>${v}</b><small>${h}</small></button>`).join('')}</div>
+   ${modo==='conjunto'?`<label>Quanto tem<div class="gsel">${NIVEIS.map((n,k)=>`<button data-cnv="${k}" class="${k===st.nivel?'on':''}">${n}</button>`).join('')}</div></label><label>Tipos dentro <span class="h">opcional · separe por vírgula</span><input id="ctp" value="${st.tipos}" placeholder="Ex.: M2, M3, M4"></label>`
+   :modo==='contavel'?`<div class="row"><label>Quantidade<span class="stp big"><button data-cq="-">−</button><input id="cq" type="number" min="0" value="${st.q}"><button data-cq="+">+</button></span></label><label>Unidade de medida<input id="cu" value="${st.un}" placeholder="un., m, folhas"></label><label>Mínimo <span class="h">avisa abaixo</span><input id="cmn" type="number" min="0" value="${st.min}"></label></div>`
+   :`${st.id.k&&st.id.ops.length?'':`<label>Quantas unidades<span class="stp big"><button data-cq="-">−</button><input id="cq" type="number" min="1" value="${st.q}"><button data-cq="+">+</button></span></label>`}${identH(st.id,true)}`}
+   <button class="link cmore" data-cmore>${st.more?'− Esconder especificações e descrição':'+ Especificações e descrição (opcional)'}</button>
+   ${st.more?`${specsH(cl,st.spec,st.extra)}<label>Descrição<textarea id="cd" rows="2" placeholder="Para que serve, cuidados, de quem é…">${st.desc}</textarea></label>`:''}
+   ${(()=>{const ja=st.nome.trim()&&Object.values(ITEMS).find(i=>norm(i.nome)===norm(st.nome)&&i.modo===modo);return ja?`<div class="hint">Já existe <b>${ja.nome}</b> cadastrado assim. Ao criar, ele entra como mais um lugar do mesmo item${ja.ident?` (diferenciado por <b>${ja.ident.nome.toLowerCase()}</b>: ${ja.ident.ops.map(o=>o.n).join(', ')})`:''}.</div>`:'';})()}
+   <div class="ferr" id="cerr">${okU?'':'Diga quantas unidades existem (pelo menos uma).'}</div></div>
+  <div class="mf"><button class="pill" data-mclose>Cancelar</button>${d?`<button class="pill pri" data-cok="here" ${okU?'':'disabled'}>${IC.in}Criar e guardar aqui</button>`:`<button class="pill" data-cok="sem" ${okU?'':'disabled'}>Criar sem lugar</button><button class="pill pri" data-cok="place" ${okU?'':'disabled'}>${IC.loc}Criar e escolher lugar</button>`}</div>`,true);
+  const cn=modalEl.querySelector('#cn');if(!st._foco){st._foco=1;cn.focus();cn.setSelectionRange(99,99);}
+  cn.oninput=()=>{const ex=v=>!!(v.trim()&&Object.values(ITEMS).some(i=>norm(i.nome)===norm(v)));const mudouEx=ex(st.nome)!==ex(cn.value);st.nome=cn.value;if(mudouEx&&st.manual){sync();render();const c2=modalEl.querySelector('#cn');c2.focus();c2.setSelectionRange(99,99);return;}if(!st.manual||mudouEx){const s_=st.manual?st.cl:sugCl(cn.value);if(s_!==st.cl||mudouEx){sync();if(s_!==st.cl){st.cl=s_;st.modo=null;}render();const c2=modalEl.querySelector('#cn');c2.focus();c2.setSelectionRange(99,99);}}};
+  const cq=modalEl.querySelector('#cq');if(cq)cq.oninput=()=>{st.q=Math.max(modoDe()==='unidades'?1:0,Math.round(+cq.value||0));};};
+ const sync=()=>{const g=id=>modalEl.querySelector(id);if(g('#cn'))st.nome=g('#cn').value;if(g('#cu'))st.un=g('#cu').value;if(g('#cmn'))st.min=Math.max(0,+g('#cmn').value||0);if(g('#cd'))st.desc=g('#cd').value;if(g('#ctp'))st.tipos=g('#ctp').value;if(g('#cq'))st.q=Math.max(modoDe()==='unidades'?1:0,Math.round(+g('#cq').value||0));
+  modalEl.querySelectorAll('[data-spec]').forEach(i=>st.spec[i.dataset.spec]=i.value);modalEl.querySelectorAll('[data-sxk]').forEach(i=>st.extra[+i.dataset.sxk][0]=i.value);modalEl.querySelectorAll('[data-sxv]').forEach(i=>st.extra[+i.dataset.sxv][1]=i.value);identSync(st.id,modalEl);};
  render();
+ modalEl.onkeydown=ev=>{if(ev.key==='Enter'&&ev.target.matches('[data-idf=novo]')){ev.preventDefault();sync();if(identAdd(st.id,true))render();const n=modalEl.querySelector('[data-idf=novo]');n&&n.focus();}};
+ modalEl.oninput=ev=>{const t=ev.target;if(t.matches('[data-idf=novaCor]')){st.id._corTocada=true;st.id.novaCor=t.value;t.parentElement.style.setProperty('--c',t.value);}if(t.matches('[data-idc]')){t.parentElement.style.setProperty('--c',t.value);}
+  if(t.matches('[data-idf=novo]')&&st.id.k==='cor'&&!st.id._corTocada){const sw=modalEl.querySelector('[data-idf=novaCor]');if(sw){sw.value=corDoNome(t.value,st.id.ops.map(o=>o.c));sw.parentElement.style.setProperty('--c',sw.value);}}};
  modalEl.onclick=ev=>{const t=ev.target;if(t.closest('[data-mclose]'))return closeModal();
-  const c=t.closest('[data-ccl]');if(c){sync();st.cl=c.dataset.ccl;st.manual=true;st.modo=null;return render();}
-  const cm=t.closest('[data-cm]');if(cm){sync();st.modo=cm.dataset.cm;return render();}const cv=t.closest('[data-cnv]');if(cv){sync();st.nivel=+cv.dataset.cnv;return render();}
-  const cq=t.closest('[data-cq]');if(cq){if(st.ik&&(st.modo||CL[st.cl||'div'].m)==='unidades')return;sync();st.q=Math.max(1,st.q+(cq.dataset.cq==='+'?1:-1));return render();}
-  const ik=t.closest('[data-ik]');if(ik){sync();st.ik=ik.dataset.ik;st.iq={};return render();}
-  const iv=t.closest('[data-iv]');if(iv){sync();st.iq[iv.dataset.iv]=(st.iq[iv.dataset.iv]||0)+1;return render();}
-  const ivm=t.closest('[data-ivm]');if(ivm){sync();st.iq[ivm.dataset.ivm]--;return render();}
-  const ok=t.closest('[data-cok]');if(!ok)return;sync();if(!st.nome.trim()){modalEl.querySelector('#cn').focus();return toast('Dê um nome ao item',null,1600);}
+  if(!t.closest('input,textarea,select'))sync();
+  if(identClick(st.id,t,true)){if(st.id.k&&st.id.ops.length===0&&st.q>0&&t.closest('[data-idk]')){}return render();}
+  const c=t.closest('[data-ccl]');if(c){st.cl=c.dataset.ccl;st.manual=true;st.modo=null;return render();}
+  const cm=t.closest('[data-cm]');if(cm){st.modo=cm.dataset.cm;if(st.modo!=='unidades')st.id={k:'',nome:'',ops:[],novo:''};return render();}const cv=t.closest('[data-cnv]');if(cv){st.nivel=+cv.dataset.cnv;return render();}
+  if(t.closest('[data-cmore]')){st.more=!st.more;return render();}
+  if(t.closest('[data-sxadd]')){st.extra.push(['','']);return render();}
+  const cq=t.closest('[data-cq]');if(cq){st.q=Math.max(modoDe()==='unidades'?1:0,st.q+(cq.dataset.cq==='+'?1:-1));return render();}
+  const ok=t.closest('[data-cok]');if(!ok||ok.disabled)return;if(!st.nome.trim()){modalEl.querySelector('#cn').focus();modalEl.querySelector('#cerr').textContent='Dê um nome ao item.';return;}
   st.nome=clean(st.nome);st.desc=clean(st.desc);st.un=clean(st.un);if(!st.nome)return;
-  const cl=st.cl||'div';const modo=st.modo||CL[cl].m;const spec={};for(const [k,v] of Object.entries(st.spec))if(v&&clean(v))spec[k]=clean(v);
-  let ident=null,uv=null;if(modo==='unidades'&&st.ik){const ops=iopts().filter(([n])=>st.iq[n]>0);if(!ops.length)return toast('Marque quantas unidades existem de cada opção',null,2400);
-   ident={nome:st.ik==='cor'?'Cor':st.ik==='tam'?'Tamanho':(st.inome||'Tipo'),tipo:st.ik==='cor'?'cor':'texto',ops:ops.map(([n,c])=>c?{n,c}:{n})};uv=ops.flatMap(([n])=>Array(st.iq[n]).fill(n));}
+  const cl=st.cl||'div';const modo=modoDe();const spec={};for(const [k,v] of Object.entries(st.spec))if(v&&clean(v))spec[k]=clean(v);for(const [k,v] of st.extra)if(clean(k)&&clean(v))spec[clean(k)]=clean(v);
+  const ident=modo==='unidades'?identFinal(st.id):null;const uv=ident?st.id.ops.flatMap(o=>Array(o.q||0).fill(o.n)):null;
+  if(modo==='unidades'&&(uv?uv.length:st.q)<1){modalEl.querySelector('#cerr').textContent='Diga quantas unidades existem (pelo menos uma).';return;}
   /* mesmo nome e mesmo modo: é o mesmo item em mais um lugar, não um cadastro novo */
   const ja=Object.values(ITEMS).find(i=>norm(i.nome)===norm(st.nome)&&i.modo===modo);const id=ja?ja.id:'I'+uid();
+  if(ja&&ja.ident&&ident&&norm(ja.ident.nome)!==norm(ident.nome)){modalEl.querySelector('#cerr').textContent=`${ja.nome} já é diferenciado por ${ja.ident.nome.toLowerCase()}. Use o mesmo critério ou dê outro nome ao item.`;return;}
   if(ja){if(ident){ja.ident=ja.ident||{nome:ident.nome,tipo:ident.tipo,ops:[]};for(const o of ident.ops)if(!identOp(ja,o.n))ja.ident.ops.push(o);}}
   else ITEMS[id]={id,nome:st.nome,cl,modo,un:st.un||'un.',min:st.min,desc:st.desc,spec,obs:'',...(ident?{ident}:{})};
   const n0=ja&&modo==='unidades'?Math.max(0,...allLoc().filter(y=>y.e.ref===id&&y.e.units).flatMap(y=>y.e.units.map(u=>u.n))):0;
-  const e=E(id,{t:Date.now()});if(modo==='unidades')e.units=uv?uv.map((v,k)=>U(n0+k+1,'boa',null,v)):Array.from({length:st.q},(_,k)=>U(n0+k+1));else if(modo==='contavel')e.qtd=st.q;else{e.nivel=st.nivel;e.tipos=st.tipos.split(',').map(s=>clean(s)).filter(Boolean).map(n=>({n}));}
+  const e=E(id,{t:Date.now()});if(modo==='unidades')e.units=uv?uv.map((v,k)=>U(n0+k+1,'boa',null,v)):Array.from({length:st.q},(_,k)=>U(n0+k+1));else if(modo==='contavel')e.qtd=st.q;else{e.nivel=st.nivel;e.tipos=st.tipos.split(',').map(z=>clean(z)).filter(Boolean).map(n=>({n}));}
   if(ja)toast(`<b>${st.nome}</b> já estava cadastrado. Entrou como mais um lugar do mesmo item.`,null,3600);
   log(`Cadastrado: ${st.nome}`,id);closeModal();
   if(ok.dataset.cok==='here')return insertDirect({kind:'new',e},opt.dest,relRect(modalEl));
@@ -492,7 +597,7 @@ $('#recBtn').onclick=()=>{modal(`<h4>Recado do quadro</h4><div style="color:var(
 $('#resetBtn').onclick=()=>{modal(`<h4>Restaurar a demonstração</h4><div style="color:var(--ink2);font-size:.9rem">Apaga tudo o que foi cadastrado e movido neste navegador e volta aos dados de exemplo.</div><div class="mf"><button class="pill" data-mclose>Cancelar</button><button class="pill danger" data-rst>Restaurar</button></div>`);
  modalEl.onclick=ev=>{if(ev.target.closest('[data-mclose]'))return closeModal();if(ev.target.closest('[data-rst]'))resetDemo();};};
 $('#labelsBtn').onclick=()=>{const used=new Map();for(const m of M){m.etq&&used.set(m.etq,m.nome);for(const p of m.partes){p.etq&&used.set(p.etq,`${m.nome} › ${partName(m,p)}`);p.orgs.forEach(o=>o.etq&&used.set(o.etq,orgName(o)));}}
- modal(`<h4>Etiquetas</h4><div style="color:var(--ink2);font-size:.85rem">Folha para imprimir. O QR aqui é só um padrão visual; na versão real ele abre o lugar no app.</div><div class="mb"><div class="sheetlab">${ETQ.map(e=>`<div class="lbl">${qrSvg(e.t)}<div><b>${e.t}</b><small>${used.get(e.id)||'sem uso'}</small></div></div>`).join('')}</div></div><div class="mf"><button class="pill" data-mclose>Fechar</button></div>`,true);modalEl.onclick=ev=>{if(ev.target.closest('[data-mclose]'))closeModal();};};
+ modal(`<h4>Etiquetas</h4><div style="color:var(--ink2);font-size:.85rem">Folha para imprimir. O QR aqui é só um padrão visual; na versão real ele abre o lugar no app.</div><div class="mb"><div class="sheetlab">${ETQ.map(e=>`<div class="flbl">${qrSvg(e.t)}<div><b>${e.t}</b><small>${used.get(e.id)||'sem uso'}</small></div></div>`).join('')}</div></div><div class="mf"><button class="pill" data-mclose>Fechar</button></div>`,true);modalEl.onclick=ev=>{if(ev.target.closest('[data-mclose]'))closeModal();};};
 $('#histBtn').onclick=()=>{modal(`<h4>Histórico</h4><div class="mb"><ul class="hist2" style="list-style:none;padding:0;margin:0">${LOG.map(l=>`<li><span class="t">${l.h}</span>${l.t}</li>`).join('')}</ul></div><div class="mf"><button class="pill" data-mclose>Fechar</button></div>`);modalEl.onclick=ev=>{if(ev.target.closest('[data-mclose]'))closeModal();};};
 
 /* ================= vistoria guiada ================= */
@@ -665,7 +770,7 @@ export function labTags(){const on=viewMode()==='over'&&!S.edit;for(const {L,el}
   for(let i=1;i<vs.length;i++){const a=vs[i-1].r,b=vs[i].r;if(a.left<b.right+6&&b.left<a.right+6&&a.top<b.bottom+6&&b.top<a.bottom+6){const dy=a.bottom-b.top+8;vs[i].el.style.top=(parseFloat(vs[i].el.style.top)+dy)+'px';}}}}
 /* ================= laço ================= */
 export let last=performance.now(),pickT=0;export const blue=new THREE.Color(0x2f8cff);
-export function focusedKey(){const top=S.stack[S.stack.length-1];if(top&&(top.t==='p'||top.t==='o'||top.t==='i'))return top.f.d.id+'/'+top.p?.id;if(S.carry&&S.carry.stage==='confirm')return S.carry.target.f.d.id+'/'+S.carry.target.p.id;return null;}
+export function focusedKey(){const top=S.stack[S.stack.length-1];if(top&&(top.t==='p'||top.t==='o'||top.t==='i'||top.t==='ed'))return top.f.d.id+'/'+top.p?.id;if(S.carry&&S.carry.stage==='confirm')return S.carry.target.f.d.id+'/'+S.carry.target.p.id;return null;}
 let ultVM='',ultTw=0;
 /* celular (sem pós-processamento): o outro lab vira segundo plano de verdade. Desenha ele primeiro (já desbotado),
    limpa a profundidade e desenha o lab escolhido por cima: nenhum móvel de lá fica na frente dos daqui. Custo ~igual a um passe só. */

@@ -490,7 +490,9 @@ export function iniciaPlanilha() {
   for (const m of M) for (const p of m.partes) { p.itens = []; p.orgs = []; }
   SEM.itens = []; BUY.length = 0; LOG.length = 0;
   if (ST.base) { if (ST.eu) defineEu(ST.eu); aplicaNaTela(); }
-  else { hidrata({}); sombra = null; for (const f of F) for (const p of f.d.partes) try { buildContents(f, p.id); } catch (e) { } }
+  else { hidrata({}); sombra = null; }
+  /* o 3D foi montado com os dados da demonstração antes daqui: refaz o conteúdo de todas as partes com o que veio da planilha */
+  for (const f of F) for (const p of f.d.partes) try { buildContents(f, p.id); } catch (e) { }
   if (!ST.sessao) return mostraLogin();
   if (ST.base) { if (ST.fila.length) envia(); else puxa(); }
   else snap(true);
