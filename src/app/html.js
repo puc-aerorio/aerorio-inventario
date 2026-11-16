@@ -15,7 +15,7 @@ export const tagH=(node,ref)=>node.etq?`<span class="plabel" data-tag="${ref}">$
 export const cntH=(st,opt={})=>`<span class="cnts"><span class="cnt" title="unidades">${IC.stack}${odoH(st.u)}</span>${st.org||opt.org?`<span class="cnt" title="organizadores">${IC.box}${odoH(st.org)}</span>`:''}${st.al?`<span class="cnt w" title="alertas">${IC.alert}${odoH(st.al)}</span>`:''}</span>`;
 export const clsNH=st=>`<div class="clsrow">${Object.entries(st.cls).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<span class="clsn">${clsH(c)}<b>${n}</b></span>`).join('')}</div>`;
 export const clsIconsH=st=>Object.keys(st.cls).slice(0,5).map(c=>clsH(c,'sm')).join('');
-export function heroH(n){const st=stats(n);return `<div class="hero"><div class="big"><span class="n">${odoH(st.u)}</span><span class="c">unidades</span></div>${clsNH(st)}<span style="flex:1"></span><span class="cnts">${st.org?`<span class="cnt" title="organizadores">${IC.box}${odoH(st.org)}</span>`:''}${st.al?`<span class="cnt w" title="alertas">${IC.alert}${odoH(st.al)}</span>`:''}</span></div>`;}
+export function heroH(n){const st=stats(n);return `<div class="hero"><div class="big"><span class="n">${odoH(st.u)}</span><span class="c">${st.u===1?'item guardado':'itens guardados'}</span></div>${clsNH(st)}<span style="flex:1"></span><span class="cnts">${st.org?`<span class="cnt" title="organizadores">${IC.box}${odoH(st.org)}</span>`:''}${st.al?`<span class="cnt w" title="alertas">${IC.alert}${odoH(st.al)}</span>`:''}</span></div>`;}
 /* desenho 2D dos organizadores: pequena isometria */
 export function shade(hex,f){const c=new THREE.Color(hex);c.multiplyScalar(f);return '#'+c.getHexString();}
 /* desenhos 2D dos organizadores (isometria nos cards, frente nas pilhas) */

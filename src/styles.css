@@ -592,3 +592,9 @@ html,body{overscroll-behavior:none}
 .pop .popadd{display:flex;gap:6px;align-items:center;padding:2px 8px 8px}
 .pop .tl.sub{padding-top:2px}
 .pop .it.muted{color:var(--ink3);font-weight:500}
+.labtag .cnt small{font:500 .72rem var(--sans);color:var(--ink3)}
+.chipbtn+.hint{font-size:.72rem}
+.irow .acts .ibtn.lb{width:auto;height:30px;padding:0 10px 0 8px;display:inline-flex;gap:5px;font:600 .74rem var(--sans)}
+.irow .acts .ibtn.lb svg{width:15px;height:15px}
+.irow .nm::after{content:'';display:inline-block;width:6px;height:6px;border-right:1.6px solid var(--ink3);border-bottom:1.6px solid var(--ink3);transform:rotate(45deg) translateY(-3px);margin-left:8px;opacity:.6;transition:transform .2s}
+.irow.open .nm::after{transform:rotate(-135deg) translateY(-1px)}

@@ -215,7 +215,9 @@ export function hidrata(db) {
   }
   // nomes conhecidos para empréstimo
   const nomes = new Set(rows('UNIDADES').map(r => txt(r.com_quem).trim()).filter(Boolean));
-  PESSOAS.length = 0; PESSOAS.push(...[...nomes].slice(0, 12));
+  /* o próprio membro primeiro: o caso mais comum é levar algo para casa */
+  const eu = ST.eu && txt(ST.eu.nome || '').trim();
+  PESSOAS.length = 0; PESSOAS.push(...[...new Set([eu, ...nomes].filter(Boolean))].slice(0, 12));
 }
 
 /* ---------------- tela = base + fila ---------------- */
@@ -335,6 +337,7 @@ export function defineEu(eu, pendentes) {
   if (!eu) return;
   const antes = ST.eu && ST.eu.papel + ST.eu.status;
   ST.eu = eu; S.me = eu.email;
+  { const n = txt(eu.nome || '').trim(); if (n && !PESSOAS.includes(n)) PESSOAS.unshift(n); }
   if (pendentes !== undefined) ST.pendentes = pendentes;
   const papel = eu.status === 'Ativo' ? (PAPEL[eu.papel] || 'vis') : 'vis';
   if (S.role !== papel || antes !== eu.papel + eu.status) setRole(papel);

@@ -30,7 +30,7 @@ export const stackEl=$('#stack');
 export const areaUnica=f=>f&&f.d.tipo==='lugar'&&f.d.partes.length===1;
 export function openStack(entries){entries=entries.filter((e,i)=>!(e.t==='m'&&areaUnica(e.f)&&entries[i+1]&&entries[i+1].f===e.f));acard.classList.remove('on');S.sel=entries[0].f;ensureLab(entries[0].f);
  [...stackEl.querySelectorAll('.scard')].forEach(c=>c.remove());S.stack=[];entries.forEach((e,i)=>pushCard(e,i<entries.length-1));home();}
-export function pushCard(e,silent){if(e.t==='m'&&areaUnica(e.f))e={t:'p',f:e.f,p:e.f.d.partes[0]};S.stack.push(e);UIH.sheetFor&&UIH.sheetFor(e.t);wake();const el=document.createElement('div');el.className='scard glass'+(silent?'':' enter');stackEl.appendChild(el);e.el=el;
+export function pushCard(e,silent){wake();if(e.t==='m'&&areaUnica(e.f))e={t:'p',f:e.f,p:e.f.d.partes[0]};S.stack.push(e);UIH.sheetFor&&UIH.sheetFor(e.t);wake();const el=document.createElement('div');el.className='scard glass'+(silent?'':' enter');stackEl.appendChild(el);e.el=el;
  renderCard(e);layoutStack();if(!silent)requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('enter')));if(!silent||S.stack.length)onTop();}
 export function popTo(i){wake();while(S.stack.length-1>i){const e=S.stack.pop();e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);}layoutStack();onTop();}
 export function closeStack(quiet){wake();S.stack.forEach(e=>{e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);});const f=S.stack[0]&&S.stack[0].f;S.stack=[];if(f)setOpen(f,null);
@@ -72,16 +72,19 @@ export function silhH(f){const d=f.d,ps=visParts(f,!!S.carry);const g=id=>d.part
  else if(d.tipo==='gaveteiro'||d.tipo==='gavvol'||d.tipo==='gavfixo')h+=`<div class="gvb">${ps.filter(p=>p.id[0]==='G').map(p=>subH(f,p)).join('')}</div>`;
  else if(d.tipo==='gavazul')h+=`<div class="gvb az">${ps.filter(p=>p.id[0]==='B').map(p=>subH(f,p)).join('')}</div>`;
  else{const gs=ps.filter(p=>p.id[0]==='G');h+=`<div class="tbl"><div class="tt">${subH(f,g('T'))}${g('T2')?subH(f,g('T2')):''}</div><div class="lg">${g('U')?subH(f,g('U')):'<div style="height:46px;flex:1"></div>'}${g('U2')?subH(f,g('U2')):''}${gs.length?`<div class="gvb mini">${gs.map(p=>subH(f,p)).join('')}</div>`:''}<div class="floor"></div></div></div>`;}
+ /* partes que o desenho não cobre (Ao lado, Atrás…): faixa própria, para todas serem alcançáveis pelo card */
+ const usadas=new RegExp(d.tipo==='estante'||d.tipo==='estanteAlta'?'^(A|N.*)$':d.tipo==='armario'?'^(A|P.*)$':/^(gaveteiro|gavvol|gavfixo)$/.test(d.tipo)?'^(A|G.*)$':d.tipo==='gavazul'?'^(A|B.*)$':'^(A|T|T2|U|U2|G.*)$');
+ const resto=ps.filter(p=>!usadas.test(p.id));if(resto.length)h+=`<div class="flbl" style="margin-top:8px">Outros lugares</div><div class="lugarS">${resto.map(p=>subH(f,p)).join('')}</div>`;
  return `<div class="silh">${h}</div>`;}
 export function renderCard(e){const sc=e.el.querySelector('.sb')?.scrollTop||0;let b='';
  if(e.t==='m'){b+=heroH(e.f.d)+encaixeH(e.f)+silhH(e.f)+filhosH(e.f,null);}
  else if(e.t==='p'){const p=e.p;b+=heroH(p)+filhosH(e.f,p.id);
-  b+=`<div style="display:flex;gap:6px;align-items:center;margin:0 0 4px"><button class="chipbtn ${p.cheia?'red':''}" data-b="cheia" data-need="m">${p.cheia?'Cheia':'Com espaço'}</button></div>`;
+  b+=`<div style="display:flex;gap:6px;align-items:center;margin:0 0 4px"><button class="chipbtn ${p.cheia?'red':''}" data-b="cheia" data-need="m">${p.cheia?'Cheia · sem espaço':'Tem espaço'}</button><span class="hint" data-need="m">${p.cheia?'Toque quando liberar espaço':'Toque para marcar como cheia'}</span></div>`;
   if(p.orgs.length){b+=`<div class="grp">Organizadores</div>`+p.orgs.map(o=>orgRowH(o)).join('');}
   b+=`<div class="grp">Itens<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button> · <button class="link" data-b="addo">+ Organizador</button></span></div>`;
-  b+=p.itens.length?p.itens.map(x=>itemH(x,e)).join(''):`<div style="color:var(--ink3);font-size:.85rem;padding:6px 0">Nenhum item solto.</div>`;}
+  b+=p.itens.length?p.itens.map(x=>itemH(x,e)).join(''):`<div style="color:var(--ink3);font-size:.85rem;padding:6px 0">${p.orgs.length?'Nenhum item fora dos organizadores.':'Nada guardado aqui ainda.'}</div>`;}
  else if(e.t==='o'){const o=e.o;b+=heroH(o);
-  b+=`<div style="display:flex;gap:8px;margin:0 0 6px" data-need="m"><button class="pill sm" data-b="moveorg">${IC.move}Mudar de lugar</button><span class="cols8" style="margin-left:auto;align-items:center">${[OT[o.tipo].cor,...OCOL.filter(c=>c!==OT[o.tipo].cor)].slice(0,6).map(c=>`<button data-ocor="${c}" class="${c===o.cor?'on':''}" style="--c:${c}" title="Trocar a cor"></button>`).join('')}</span></div>`;
+  b+=`<div style="display:flex;gap:8px;margin:0 0 6px" data-need="m"><button class="pill sm" data-b="moveorg">${IC.move}Mudar de lugar</button><button class="pill sm" data-b="rmorg" title="Os itens de dentro ficam soltos neste lugar">${IC.trash}Remover</button><span class="cols8" style="margin-left:auto;align-items:center">${[OT[o.tipo].cor,...OCOL.filter(c=>c!==OT[o.tipo].cor)].slice(0,6).map(c=>`<button data-ocor="${c}" class="${c===o.cor?'on':''}" style="--c:${c}" title="Trocar a cor"></button>`).join('')}</span></div>`;
   b+=`<div class="grp">Dentro de ${orgName(o).toLowerCase()}<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button></span></div>`;
   b+=o.itens.length?o.itens.map(x=>itemH(x,e)).join(''):'<div style="color:var(--ink3);font-size:.85rem">Vazio.</div>';}
  else if(e.t==='i')b+=detailH(e);
@@ -93,7 +96,7 @@ export function refreshCards(){S.stack.forEach(renderCard);if(S.sel&&acard.class
 /* --------- linha de item --------- */
 export const piecesH=n=>{const m=12;return '<i></i>'.repeat(Math.min(n,m))+(n>m?`<em>+${n-m}</em>`:'');};
 export function itemH(e,ctx,opt={}){const it=IT(e),c=CL[it.cl].c;const al=alertsOf(e);const esg=it.modo==='contavel'&&e.qtd===0;let q='',ctl='';
- if(it.modo==='contavel'){q=esg?`<div class="q" style="font-size:1rem">Esgotado</div>`:`<div class="q">${odoH(e.qtd)}<small>${it.un}</small></div>`;
+ if(it.modo==='contavel'){q=esg?`<div class="q" style="color:#C0392B">0<small>${it.un}</small></div>`:`<div class="q">${odoH(e.qtd)}<small>${it.un}</small></div>`;
   ctl=`<div class="pcs" style="--c:${c}">${piecesH(e.qtd)}</div><span class="rc"><button data-act="dec" aria-label="Usar uma">−</button><button data-act="inc" aria-label="Repor uma">+</button></span>`;}
  else if(it.modo==='unidades'){q=`<div class="q">${odoH(e.units.length)}<small>${e.units.length===1?'unidade':'unidades'}</small></div>`;
   ctl=`<div class="units">${e.units.map(u=>unitH(u,it)).join('')}<button class="uc add" data-act="addunit" data-need="m" title="Registrar mais uma unidade">+</button></div>${vlegH(e,it)}`;}
@@ -101,7 +104,7 @@ export function itemH(e,ctx,opt={}){const it=IT(e),c=CL[it.cl].c;const al=alerts
   /* caixa/kit: duas linhas rotuladas — quanto tem (nível) e o que tem dentro (tipos; tocar marca falta) */
   ctl=`<div class="cjrow"><span class="cjl">Quanto tem</span><span class="gauge" style="--c:${c}"><i style="height:${e.nivel/3*100}%"></i></span><div class="gsel" data-need="m">${NIVEIS.map((n,k)=>`<button data-act="lvl" data-n="${k}" class="${k===e.nivel?'on':''}">${n}</button>`).join('')}</div></div>
    <div class="cjrow"><span class="cjl">Tipos dentro</span><div class="tps">${(e.tipos||[]).map((t,k)=>`<button class="tp ${t.aus?'aus':''}" data-act="tipo" data-k="${k}" title="${t.aus?'Está faltando · toque quando repor':'Toque para marcar que está faltando'}">${t.aus?'⚠ ':''}${t.n}</button>`).join('')}<button class="tp add" data-act="addtipo" data-need="m">+ tipo</button></div></div>`;}
- const acts=`<div class="acts">${[['det','info','Detalhes'],['edit','edit','Editar'],['mov','move','Mudar de lugar'],['rm','trash','Remover'],['nf','nf',e.nf?'Encontrei':'Não encontrei']].concat(it.modo==='unidades'?[['emp','hand','Emprestar']]:[]).map(([a,i,t])=>`<button class="ibtn" data-a="${a}" data-tt="${t}">${IC[i]}</button>`).join('')}</div>`;
+ const acts=`<div class="acts">${[['det','info','Detalhes'],['edit','edit','Editar'],['mov','move','Mudar de lugar'],['rm','trash',isAdmin()?'Baixa/apagar':'Dar baixa'],['nf','nf',e.nf?'Encontrei':'Não achei']].concat(it.modo==='unidades'?[['emp','hand','Emprestar']]:[]).map(([a,i,t])=>`<button class="ibtn lb" data-a="${a}">${IC[i]}<span>${t}</span></button>`).join('')}</div>`;
  const open=S.openRow===e.id;
  return `<div class="irow ${open?'open':''} ${esg?'esg':''}" data-item="${e.id}">${clsH(it.cl,it.modo==='contavel'&&e.qtd<=it.min&&e.qtd>0?'pulse':'')}<div class="nm">${it.nome}${opt.path?`<small>${opt.path}</small>`:''}</div>${q}
   <div class="wr">${al.map(([k,t])=>`<span class="wn ${k}">${t}</span>`).join('')}</div><div class="ctl">${ctl}</div>${acts}</div>`;}
@@ -237,6 +240,10 @@ export function handleCard(ev,e){const t=ev.target;if(e.t==='ed'&&!t.closest('[d
   if(a==='addi')return openItemCreator({dest:{f:e.f,p:e.p,o:e.t==='o'?e.o:null}});
   if(a==='addo')return openOrgCreator({dest:{f:e.f,p:e.p}});
   if(a==='moveorg')return startCarry({kind:'org',x:{m:e.f.d,p:e.p,o:e.o}});
+  if(a==='rmorg'){if(!can())return;const o=e.o,p=e.p,f=e.f,i=p.orgs.indexOf(o);if(i<0)return;const its=[...o.itens];
+   p.orgs.splice(i,1);p.itens.push(...its);o.itens=[];log(`${orgName(o)} removido de ${f.d.nome} › ${partName(f.d,p)}${its.length?` (${its.length} item(ns) ficaram soltos no lugar)`:''}`);save();
+   popTo(S.stack.indexOf(e)-1);refreshCards();buildContents(f,p.id);
+   toast(`<b>${orgName(o)}</b> removido${its.length?`. ${its.length===1?'O item ficou':'Os itens ficaram'} em ${partName(f.d,p)}`:''}`,()=>{p.itens=p.itens.filter(z=>!its.includes(z));o.itens=its;p.orgs.splice(i,0,o);save();refreshCards();buildContents(f,p.id);},5200);return;}
   if(a==='loc'){const y=locE(b.dataset.e);return localizar(y);}
   return;}
  const pr=t.closest('[data-part]');if(pr&&e.t==='m'){const p=e.f.d.partes.find(x=>x.id===pr.dataset.part);setHoverPart(null);pushCard({t:'p',f:e.f,p});return;}
@@ -324,7 +331,7 @@ export const modalEl=$('#modal');
 export function modal(h,wide){modalEl.className='ui modal glass'+(wide?' wide':'');modalEl.innerHTML=h;requestAnimationFrame(()=>modalEl.classList.add('on'));$('#scrim').classList.add('on');}
 export function closeModal(){modalEl.classList.remove('on');if(!S.pal)$('#scrim').classList.remove('on');}
 modalEl.addEventListener('click',ev=>{if(ev.target.closest('[data-mclose]'))closeModal();});
-export function openLoan(x,unit){const it=IT(x.e);const avail=x.e.units.filter(u=>!u.emp);if(!avail.length)return toast('Nenhuma unidade disponível para emprestar');let u=unit||avail[0];let tipo='equipe',para='',prazo='';
+export function openLoan(x,unit){const it=IT(x.e);const avail=x.e.units.filter(u=>!u.emp&&u.estado!=='quebrada'&&u.estado!=='manutencao'&&u.estado!=='baixada');if(!avail.length)return toast(x.e.units.some(u=>!u.emp)?'As unidades livres estão quebradas ou em manutenção':'Nenhuma unidade disponível para emprestar');if(unit&&!avail.includes(unit))return toast(`A unidade ${unit.n} está ${ESTADOS[unit.estado][0].toLowerCase()}. Conserte antes de emprestar.`,null,2600);let u=unit||avail[0];let tipo='equipe',para='',prazo='';
  const render=()=>{modal(`<h4>Emprestar ${it.nome}</h4><div style="color:var(--ink2);font-size:.86rem">Só para quando alguém leva para fora do laboratório. Uso no dia a dia não precisa ser registrado.</div>
   <div class="form"><label>Unidade<div class="units">${avail.map(a=>`<button class="uc ${a===u?'':''}" data-lu="${a.n}" style="--sc:${a===u?'#0077C8':ESTADOS[a.estado][1]};${a===u?'background:#0077C8;color:#fff':''}">${a.n}</button>`).join('')}</div></label>
   <label>Para<div class="gsel">${Object.entries(TIPOEMP).map(([k,v])=>`<button data-lt="${k}" class="${k===tipo?'on':''}">${v}</button>`).join('')}</div></label>
@@ -392,7 +399,10 @@ export function renderPal(){const mode=S.pal.mode;
 }
 export function renderBusca(){const s=norm(q.value.trim());let h='';palRes=[];
  const row=(r,ic,t,p,right,acts)=>{palRes.push(r);const k=palRes.length-1;return `<div class="r ${k===palSel?'on':''}" data-k="${k}">${ic}<div><div class="t">${t}</div><div class="p">${p}</div></div><span>${right||''}</span><div class="ra">${acts}</div></div>`;};
- const groups={};for(const x of allLoc()){if(s&&!norm(IT(x.e).nome).includes(s)&&!(x.m&&norm(pathOf(x)).includes(s))&&!(x.e.units&&x.e.units.some(u=>u.v&&norm(u.v).includes(s))))continue;(groups[x.e.ref]=groups[x.e.ref]||[]).push(x);}
+ const groups={};/* todas as palavras precisam aparecer em algum lugar: nome, descrição, especificações, tipos, cores/opções, caminho; plural simples vira singular */
+ const pal=s.split(/\s+/).filter(Boolean).map(w=>w.length>3&&/[^s]s$/.test(w)?w.slice(0,-1):w);
+ const casa=x=>{const it=IT(x.e);const hay=norm([it.nome,it.desc,...Object.values(it.spec||{}),...(x.e.tipos||[]).map(t=>t.n),...(it.ident?it.ident.ops.map(o=>o.n):[]),x.m?pathOf(x):''].join(' ')).replace(/\s+/g,' ');return pal.every(w=>hay.includes(w));};
+ for(const x of allLoc()){if(s&&!casa(x))continue;(groups[x.e.ref]=groups[x.e.ref]||[]).push(x);}
  const its=Object.entries(groups).slice(0,30);if(its.length)h+='<div class="ph">Itens</div>';
  for(const [ref,xs] of its){const it=ITEMS[ref];const tot=xs.reduce((a,x)=>a+(countable(x.e)?unitsOf(x.e):0),0);const al=xs.flatMap(x=>alertsOf(x.e)).filter(a=>a[0]==='red').map(a=>a[1]);
   h+=row({t:'i',xs},clsH(it.cl),it.nome,(xs.length>1?`${xs.length} lugares`:pathOf(xs[0]))+(al.length?' · '+al.join(' · '):''),it.modo==='conjunto'?NIVEIS[xs[0].e.nivel]:`<b style="font:600 1.25rem var(--cond)">${tot}</b>`,
@@ -415,7 +425,7 @@ $('#pres').addEventListener('click',ev=>{const t=ev.target;if(!S.pal)return;cons
  const gt=t.closest('[data-gt]');if(gt){gTab=+gt.dataset.gt;renderPal();return;}
  const cr=t.closest('[data-gk]');if(cr&&can()){const x=locE(cr.dataset.e);const dest=mode==='aqui'?S.pal.dest:null;closePalette(true);
   if(dest&&dest.p)return insertDirect({kind:'entry',x},{f:dest.f,p:dest.p,o:dest.o||null});startCarry({kind:'entry',x,destM:dest?dest.f:null});}});
-$('#scrim').onclick=()=>{if(modalEl.classList.contains('on'))return closeModal();closePalette();};
+$('#scrim').onclick=()=>{if(modalEl.classList.contains('on')){/* formulários só fecham pelo Cancelar: um clique fora não pode jogar fora o que foi digitado */if(modalEl.querySelector('.form input,.form textarea')){modalEl.animate([{transform:'translate(-50%,-50%)'},{transform:'translate(calc(-50% - 6px),-50%)'},{transform:'translate(calc(-50% + 6px),-50%)'},{transform:'translate(-50%,-50%)'}],{duration:260});return toast('Para sair sem salvar, use <b>Cancelar</b>',null,1800);}return closeModal();}closePalette();};
 
 /* ================= criar item ================= */
 export function openItemCreator(opt={}){
@@ -423,7 +433,7 @@ export function openItemCreator(opt={}){
  const modoDe=()=>st.modo||CL[st.cl||'div'].m;
  const total=()=>modoDe()==='unidades'&&st.id.k&&st.id.ops.length?st.id.ops.reduce((a,o)=>a+(o.q||0),0):st.q;
  const render=()=>{const cl=st.cl||'div';const modo=modoDe();const d=opt.dest;const tot=total();const okU=modo!=='unidades'||tot>0;
-  modal(`<h4>Novo item</h4><div class="msub">${d?`Vai direto para <b>${d.o?orgName(d.o):partName(d.f.d,d.p)}</b>.`:'Depois do cadastro você escolhe onde guardar, no 3D.'}</div>
+  modal(`<h4>Novo item</h4><div class="msub">${d?`Vai direto para <b>${d.f.d.nome} › ${partName(d.f.d,d.p)}${d.o?' › '+orgName(d.o):''}</b>.`:'Depois do cadastro você escolhe onde guardar, no 3D.'}</div>
   <div class="form"><label>Nome<input id="cn" value="${st.nome}" placeholder="Ex.: Broca 4 mm, Cola epóxi, Conector XT60"></label>
    <div class="flbl">Classe <span>${st.cl&&!st.manual&&st.nome?'sugerida pelo nome · toque para trocar':'toque para escolher'}</span></div>
    <div class="clc-grid">${Object.entries(CL).map(([k,v])=>`<button class="clc ${k===st.cl?'on':''}" data-ccl="${k}">${clsH(k)}<span>${v.n}</span></button>`).join('')}</div>
@@ -465,8 +475,11 @@ export function openItemCreator(opt={}){
   else ITEMS[id]={id,nome:st.nome,cl,modo,un:st.un||'un.',min:st.min,desc:st.desc,spec,obs:'',...(ident?{ident}:{})};
   const n0=ja&&modo==='unidades'?Math.max(0,...allLoc().filter(y=>y.e.ref===id&&y.e.units).flatMap(y=>y.e.units.map(u=>u.n))):0;
   const e=E(id,{t:Date.now()});if(modo==='unidades')e.units=uv?uv.map((v,k)=>U(n0+k+1,'boa',null,v)):Array.from({length:st.q},(_,k)=>U(n0+k+1));else if(modo==='contavel')e.qtd=st.q;else{e.nivel=st.nivel;e.tipos=st.tipos.split(',').map(z=>clean(z)).filter(Boolean).map(n=>({n}));}
-  if(ja)toast(`<b>${st.nome}</b> já estava cadastrado. Entrou como mais um lugar do mesmo item.`,null,3600);
+  if(ja&&!(opt.dest&&((opt.dest.o||opt.dest.p).itens||[]).some(z=>z.ref===id)))toast(`<b>${st.nome}</b> já estava cadastrado. Entrou como mais um lugar do mesmo item.`,null,3600);
   log(`Cadastrado: ${st.nome}`,id);closeModal();
+  const box=opt.dest&&(opt.dest.o||opt.dest.p);const mesmo=ja&&ok.dataset.cok==='here'&&box&&(box.itens||[]).find(z=>z.ref===id);
+  if(mesmo){if(modo==='unidades')mesmo.units.push(...e.units);else if(modo==='contavel')mesmo.qtd+=e.qtd;else{mesmo.nivel=e.nivel;for(const t of e.tipos)if(!(mesmo.tipos||[]).some(z=>norm(z.n)===norm(t.n)))(mesmo.tipos=mesmo.tipos||[]).push(t);}
+   touch(mesmo);save();refreshCards();buildContents(opt.dest.f,opt.dest.p.id);toast(`Somado ao <b>${st.nome}</b> que já estava aqui`,null,2600);return;}
   if(ok.dataset.cok==='here')return insertDirect({kind:'new',e},opt.dest,relRect(modalEl));
   if(ok.dataset.cok==='sem'){SEM.itens.push(e);save();return toast(`<b>${st.nome}</b> cadastrado sem lugar. Aparece em Guardar › Sem lugar.`);}
   startCarry({kind:'new',e,destM:opt.destM});};}
@@ -482,7 +495,7 @@ export function buildShow(dir){const s=S.oc;for(const c of [...show.children]){s
   if(k){holder.traverse(x=>{if(x.isMesh){x.material=x.material.clone();x.material.transparent=true;x.material.opacity=.3;x.castShadow=false;}});}}
  s.slide=dir;if(dir)tween({ms:420,ease:'out',key:'oslide',update:p=>{s.slide=dir*(1-p);}});}
 export function renderOC(){const s=S.oc;const t=OT[OTK[s.ti]];const node={etq:s.etq};
- ocEl.innerHTML=`<h4>Novo organizador</h4><div style="color:var(--ink2);font-size:.82rem">${s.dest?`Vai direto para <b>${partName(s.dest.f.d,s.dest.p)}</b>.`:'Depois você escolhe onde guardar.'}</div>
+ ocEl.innerHTML=`<h4>Novo organizador</h4><div style="color:var(--ink2);font-size:.82rem">${s.dest?`Vai direto para <b>${s.dest.f.d.nome} › ${partName(s.dest.f.d,s.dest.p)}</b>.`:'Depois você escolhe onde guardar.'}</div>
  <div class="tsel"><button class="ibtn" data-o="prev">${IC.back}</button><div class="tn"><b>${t.n}</b><small>${OTK.indexOf(OTK[s.ti])+1} de ${OTK.length}</small></div><button class="ibtn" data-o="next">${IC.next}</button></div>
  <div class="form" style="padding-top:0"><label>Cor<div class="cols8">${[OT[OTK[s.ti]].cor,...OCOL.filter(c=>c!==OT[OTK[s.ti]].cor)].slice(0,8).map(c=>`<button data-oc="${c}" class="${c===s.cor?'on':''}" style="--c:${c}"></button>`).join('')}</div></label>
  <label>Tamanho<div class="gsel">${['P','M','G'].map(z=>`<button data-oz="${z}" class="${z===s.tam?'on':''}">${{P:'Pequeno',M:'Médio',G:'Grande'}[z]}</button>`).join('')}</div></label>
@@ -511,11 +524,11 @@ export function startCarry(c){if(!can())return;closePalette(true);closeStack(tru
  c.ghost=new THREE.Group();scene.add(c.ghost);
  if(c.kind==='org'||c.kind==='neworg'){const o=c.kind==='org'?c.x.o:c.o;const g=buildOrg({...o,id:'ghost',_sz:SZ[o.tam]},c.ghost);applyStyleTo(c.ghost);}
  else piece(c.ghost,c.kind==='new'?c.e:c.x.e,.16);c.ghost.visible=false;
- if(c.destM){focusF(c.destM);}else if(!S.lab&&c.x&&c.x.m)focusLab(c.x.m.lab);
+ if(c.destM){focusF(c.destM);}else if(!S.lab&&c.x&&c.x.m)focusLab(c.x.m.lab);else if(S.lab)focusLab(S.lab);/* afasta do close do card: dá para ver os outros móveis */
  showGuide();home();refreshCards();}
 export function showGuide(){const c=S.carry;if(!c){guide.classList.remove('on');return;}
  if(c.stage==='part'){const h=c.hover;const last=S.last&&validTarget(S.last.f,S.last.p.id)?`<button class="pill sm" data-gd="last">${IC.loc}Último: ${S.last.f.d.nome} › ${partName(S.last.f.d,S.last.p)}</button>`:'';
-  guide.innerHTML=`<span class="carryx">${carryLabel(c)}</span><span>${h?`Guardar em <b>${h.f.d.nome} › ${partName(h.f.d,h.f.d.partes.find(p=>p.id===h.pid))}</b> · clique para escolher`:'Passe o mouse sobre as partes dos móveis e clique onde vai guardar'}</span>${last}<button class="pill sm ghost" data-gd="cancel">Cancelar</button>`;}
+  guide.innerHTML=`<span class="carryx">${carryLabel(c)}</span><span>${h?`Guardar em <b>${h.f.d.nome} › ${partName(h.f.d,h.f.d.partes.find(p=>p.id===h.pid))}</b> · clique para escolher`:(mob()?'Toque na parte do móvel onde vai guardar':'Passe o mouse sobre as partes dos móveis e clique onde vai guardar')}</span>${last}<button class="pill sm ghost" data-gd="cancel">Cancelar</button>`;}
  else{const t=c.target;const path=`${t.f.d.nome} › ${partName(t.f.d,t.p)}${t.org?' › '+orgName(t.org):''}`;const isItem=!(c.kind==='org'||c.kind==='neworg');
   guide.innerHTML=`<span class="carryx">${carryLabel(c)}</span><span>Guardar em <b>${path}</b>${isItem&&t.p.orgs.length?' · clique num organizador para pôr dentro dele':''}</span><button class="pill sm" data-gd="back">${IC.back}Voltar</button><button class="pill sm pri" data-gd="ok">${IC.check}Confirmar</button>`;}
  guide.classList.add('on');}
@@ -538,14 +551,14 @@ export function commitCarry(){const c=S.carry;const t=c.target;const f=t.f,p=t.p
  if(c.kind==='entry'){const x=c.x;removeEntry(x);const same=into.find(e=>e.ref===x.e.ref&&e!==x.e);const it=IT(x.e);
   if(same&&it.modo==='contavel'){same.qtd+=x.e.qtd;newId=same.id;touch(same);}else if(same&&it.modo==='unidades'){same.units.push(...x.e.units);same.units.sort((a,b)=>a.n-b.n);newId=same.id;touch(same);}else{into.push(x.e);touch(x.e);x.e.nf=false;newId=x.e.id;}
   if(!same||it.modo==='conjunto')undo=()=>{into.splice(into.indexOf(x.e),1);restoreEntry(x);rebuildAt(x);buildContents(f,p.id);refreshCards();};
-  msg=`<b>${it.nome}</b> guardado em ${o?orgName(o):partName(f.d,p)}`;log(`${it.nome}: de ${pathOf(x)} para ${f.d.nome} › ${partName(f.d,p)}${o?' › '+orgName(o):''}`,it.id);rebuildAt(x);}
+  msg=`<b>${it.nome}</b> agora está em ${f.d.nome} › ${partName(f.d,p)}${o?' › '+orgName(o):''}`;log(`${it.nome}: de ${pathOf(x)} para ${f.d.nome} › ${partName(f.d,p)}${o?' › '+orgName(o):''}`,it.id);rebuildAt(x);}
  else if(c.kind==='unit'){const x=c.x,u=c.u;const it=IT(x.e);x.e.units.splice(x.e.units.indexOf(u),1);const rm=!x.e.units.length;if(rm)removeEntry(x);
   let same=into.find(e=>e.ref===x.e.ref);if(same&&same!==x.e){same.units.push(u);same.units.sort((a,b)=>a.n-b.n);touch(same);newId=same.id;}else{const ne=E(x.e.ref,{units:[u],t:Date.now()});into.push(ne);newId=ne.id;}
   msg=`<b>${it.nome} · ${u.n}</b> agora em ${o?orgName(o):partName(f.d,p)}`;log(`${it.nome} #${u.n}: de ${pathOf(x)} para ${f.d.nome} › ${partName(f.d,p)}`,it.id);rebuildAt(x);}
- else if(c.kind==='new'){into.push(c.e);newId=c.e.id;msg=`<b>${IT(c.e).nome}</b> guardado em ${o?orgName(o):partName(f.d,p)}`;}
+ else if(c.kind==='new'){into.push(c.e);newId=c.e.id;msg=`<b>${IT(c.e).nome}</b> agora está em ${f.d.nome} › ${partName(f.d,p)}${o?' › '+orgName(o):''}`;}
  else if(c.kind==='org'){const x=c.x;x.p.orgs.splice(x.p.orgs.indexOf(x.o),1);p.orgs.push(x.o);msg=`<b>${orgName(x.o)}</b> agora em ${f.d.nome} › ${partName(f.d,p)}`;log(`${orgName(x.o)}: movido para ${f.d.nome} › ${partName(f.d,p)}`);
   buildContents(byId(x.m.id),x.p.id);undo=()=>{p.orgs.splice(p.orgs.indexOf(x.o),1);x.p.orgs.push(x.o);buildContents(byId(x.m.id),x.p.id);buildContents(f,p.id);refreshCards();};}
- else if(c.kind==='neworg'){p.orgs.push(c.o);msg=`<b>${orgName(c.o)}</b> guardado em ${partName(f.d,p)}`;}
+ else if(c.kind==='neworg'){p.orgs.push(c.o);msg=`<b>${orgName(c.o)}</b> agora está em ${f.d.nome} › ${partName(f.d,p)}`;}
  S.last={f,p};scene.remove(c.ghost);S.carry=null;guide.classList.remove('on');buildContents(f,p.id);popIn(f,p.id,newId,c.kind==='org'||c.kind==='neworg'?(c.o||c.x.o).id:null);
  const ent=[{t:'m',f},{t:'p',f,p}];if(o)ent.push({t:'o',f,p,o});openStack(ent);
  setTimeout(()=>{const r=newId&&document.querySelector(`.scard:last-child .irow[data-item="${newId}"]`);if(r){r.classList.add('new','hl');r.scrollIntoView({block:'nearest'});}},120);
@@ -623,10 +636,14 @@ export function renderVist(){const v=S.vist;if(!v)return;const n=v.route.length;
   <div class="bd">${its.map(x=>{const ok=v.ok.has(x.e.id),fx=v.fix.has(x.e.id);const al=alertsOf(x.e);const it=IT(x.e);const val=it.modo==='conjunto'?NIVEIS[x.e.nivel]:unitsOf(x.e);
    return `<div class="vrow ${ok||fx?'done':''}" data-vi="${x.e.id}">${clsH(it.cl)}<div><div style="font-weight:600">${it.nome} <b style="font:600 1.15rem var(--cond);margin-left:4px">${val}</b></div><div style="font-size:.76rem;color:var(--ink3)">${partName(x.m,x.p)}${x.o?' › '+orgName(x.o):''}${al.length?' · '+al.map(a=>a[1]).join(' · '):''}</div></div>
     <div style="display:flex;gap:6px"><button class="chipbtn ${ok?'ok':''}" data-v="ok">${ok?'✓ Confere':'Confere'}</button><button class="chipbtn" data-v="fix">Corrigir</button></div>${v.open===x.e.id?`<div style="grid-column:1/4">${itemH(x.e,null)}</div>`:''}</div>`;}).join('')}</div>
-  <div class="ft"><button class="pill pri" data-v="next">${v.i<n-1?'Próximo móvel':'Concluir'} ${IC.next}</button></div>`;}
+  ${its.length?'':'<div class="hint" style="padding:10px 2px">Nada cadastrado neste móvel. Abra as portas e gavetas: se estiver vazio mesmo, confirme abaixo.</div>'}</div>
+  <div class="ft">${v.i>0?`<button class="pill sm ghost" data-v="prev">${IC.back}Anterior</button>`:''}<button class="pill sm ghost" data-v="skip" title="Não marca como conferido">Pular</button><span style="flex:1"></span><button class="pill pri" data-v="next">${!its.length?'Está vazio mesmo':done===its.length?'Conferido':'Tudo confere'} · ${v.i<n-1?'próximo':'concluir'} ${IC.next}</button></div>`;}
 vs.addEventListener('click',ev=>{const v=S.vist;if(!v)return;const b=ev.target.closest('[data-v]');
  if(!b){const row=ev.target.closest('.irow');if(!row)return;const x=locE(row.dataset.item);const act=ev.target.closest('[data-act]');if(act){entryAct(x,act.dataset.act,act,row);v.fix.add(x.e.id);}const ia=ev.target.closest('[data-a]');if(ia&&ia.dataset.a!=='det')itemAction(x,ia.dataset.a,{});return;}
- const a=b.dataset.v;if(a==='end')return stopVist();if(a==='next'){const fv=v.route[v.i];setOpen(fv,null);conferido(fv);v.i++;v.open=null;vistGo();return;}
+ const a=b.dataset.v;if(a==='end')return stopVist();if(a==='next'||a==='skip'||a==='prev'){const fv=v.route[v.i];setOpen(fv,null);
+  /* só "Tudo confere" grava a conferência; os itens ainda sem resposta contam como conferidos */
+  if(a==='next'){for(const x of [...walk()].filter(x=>x.m===fv.d))if(!v.fix.has(x.e.id))v.ok.add(x.e.id);conferido(fv);log(`Vistoria: ${fv.d.nome} conferido`);}
+  v.i+=a==='prev'?-1:1;v.open=null;vistGo();return;}
  const id=b.closest('[data-vi]').dataset.vi;if(a==='ok'){v.ok.add(id);v.fix.delete(id);if(v.open===id)v.open=null;log(`Vistoria: ${IT(locE(id).e).nome} confere`);}
  if(a==='fix'){v.open=v.open===id?null:id;v.ok.delete(id);}renderVist();});
 
@@ -700,7 +717,7 @@ q.addEventListener('keydown',ev=>ev.stopPropagation());
 
 
 /* ================= destaque de parte (card ↔ 3D) ================= */
-export function setHoverPart(h,src){const prev=S.hoverPart;if(prev&&h&&prev.f===h.f&&prev.pid===h.pid)return;S.hoverPart=h;
+export function setHoverPart(h,src){const prev=S.hoverPart;if(prev&&h&&prev.f===h.f&&prev.pid===h.pid)return;S.hoverPart=h;wake(900);
  document.querySelectorAll('.sub.hov').forEach(s=>s.classList.remove('hov'));
  if(h&&src!=='card'){const top=S.stack[S.stack.length-1];if(top&&top.t==='m'&&top.f===h.f){const s=top.el.querySelector(`.sub[data-part="${h.pid}"]`);s&&s.classList.add('hov');}}
  if(h&&src==='card'){const s=document.querySelector(`.scard:last-child .sub[data-part="${h.pid}"]`);s&&s.classList.add('hov');}}
@@ -764,7 +781,7 @@ refreshBadges();
 export const LT=LABS.map(L=>{const el=document.createElement('button');el.className='labtag';app.appendChild(el);el.onclick=()=>focusLab(L.id);el.onmouseenter=()=>S.labHover=L.id;el.onmouseleave=()=>S.labHover=null;return {L,el};});
 export function labTags(){const on=viewMode()==='over'&&!S.edit;for(const {L,el} of LT){if(!on){el.classList.remove('vis');continue;}
   const fs=F.filter(f=>f.d.lab===L.id);let u=0,al=0;for(const f of fs){const st=stats(f.d);u+=st.u;al+=st.al;}
-  const h=`<b>${L.nome.replace('Laboratório de ','')}</b><span class="cnts"><span class="cnt" title="unidades">${IC.stack}${u}</span><span class="cnt" title="móveis">${IC.open}${fs.length}</span>${al?`<span class="cnt w" title="alertas">${IC.alert}${al}</span>`:''}</span><i>Entrar${IC.next}</i>`;if(el.dataset.h!==h){el.innerHTML=h;el.dataset.h=h;}
+  const h=`<b>${L.nome.replace('Laboratório de ','')}</b><span class="cnts"><span class="cnt" title="unidades guardadas">${IC.stack}${u} <small>${u===1?'unidade':'unidades'}</small></span><span class="cnt" title="móveis">${IC.open}${fs.length} <small>móveis</small></span>${al?`<span class="cnt w" title="alertas">${IC.alert}${al}</span>`:''}</span><i>Entrar${IC.next}</i>`;if(el.dataset.h!==h){el.innerHTML=h;el.dataset.h=h;}
   let [x,y]=project(L.c.clone().add(new THREE.Vector3(0,3.1,0)));x=Math.max(130,Math.min(app.clientWidth-130,x));y=Math.max(mob()?150:120,y);el.style.left=x+'px';el.style.top=y+'px';el.classList.add('vis');el.classList.toggle('on',S.labHover===L.id);}
  if(on){const vs=LT.filter(t=>t.el.classList.contains('vis')).map(t=>({el:t.el,r:t.el.getBoundingClientRect()})).sort((a,b)=>a.r.top-b.r.top);
   for(let i=1;i<vs.length;i++){const a=vs[i-1].r,b=vs[i].r;if(a.left<b.right+6&&b.left<a.right+6&&a.top<b.bottom+6&&b.top<a.bottom+6){const dy=a.bottom-b.top+8;vs[i].el.style.top=(parseFloat(vs[i].el.style.top)+dy)+'px';}}}}
@@ -830,7 +847,9 @@ export function focoProf(){const top=S.stack[S.stack.length-1];let f=null,pid=nu
 export function want_y(){return (S.stack.length||S.oc)&&mob()?(S.stack.length?(S.sheetH||app.clientHeight*.56)/2:app.clientHeight*.24):0;}
 /* parado: só conta o tempo e espera; o alerta pulsante do móvel aberto continua no modo completo */
 /* transições em curso (desfoque do outro lab, desbotado do celular) não deixam a cena dormir, por mais lento que seja o quadro */
-export function parado(now){return now>RENDER.ate&&!(S.stack.length&&!LITE)&&!S.vist&&!GH.anda&&!(FADE===1&&Math.abs((S.lab&&!S.edit?1:0)-WL.k)>.002);}
+/* card aberto: só segue desenhando se o móvel em foco tem alerta pulsando; o resto (hover, portas, foco) acorda a cena quando muda */
+const pulsa=()=>{const f=S.stack[0]&&S.stack[0].f;return !!f&&f.meshes.some(m=>m.userData.alert);};
+export function parado(now){return now>RENDER.ate&&!(S.stack.length&&!LITE&&pulsa())&&!S.vist&&!GH.anda&&!(FADE===1&&Math.abs((S.lab&&!S.edit?1:0)-WL.k)>.002);}
 wake(4000);requestAnimationFrame(loop);
 
 setRole('mem');

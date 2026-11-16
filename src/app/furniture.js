@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { F, app, halos, pick } from './state.js';
+import { F, app, halos, pick, wake } from './state.js';
 import { CARD, CL, IT, M, NIVEIS, OT, SZ, isAlert, unitsOf } from './data.js';
 import { shade } from './html.js';
 import { box, cyl, iconTexture, mesh, numTexture, scene, sprite } from './scene.js';
@@ -212,7 +212,7 @@ export function layout(parent,w,d,entries,orgs,size,hmax=9){const placed=[],gap=
  if(entries.length){const g=new THREE.Group();parent.add(g);g.position.z=z0+remD/2;gridPlace(g,w*.92,remD,entries,size,hmax);}return placed;}
 export function gridPlace(parent,w,d,entries,size,hmax=9){const n=entries.length;const cols=Math.max(1,Math.min(n,Math.round(Math.sqrt(n*w/d))||1));const rows=Math.ceil(n/cols);const cw=w/cols,cd=d/rows;
  const s=Math.min(size,cw*.8,cd*1.1,hmax/1.6);entries.forEach((e,k)=>{const p=piece(parent,e,s);p.position.set(-w/2+cw*(k%cols+.5),0,-d/2+cd*(Math.floor(k/cols)+.5));});}
-export function buildContents(f,pid){const pt=f.parts[pid],p=f.d.partes.find(x=>x.id===pid);const c=pt.content;
+export function buildContents(f,pid){const pt=f.parts[pid],p=f.d.partes.find(x=>x.id===pid);const c=pt.content;wake(700);
  for(const ch of [...c.children]){if(ch===pt.halo||ch===pt.mark)continue;c.remove(ch);ch.traverse(x=>{if(x.isMesh)x.geometry.dispose();});}
  const size=pt.k==='drawer'?.085:.13;pt.orgG=layout(c,pt.w,pt.d,p.itens,p.orgs,size,(pt.k==='shelf'||pt.k==='under')?pt.h:9);
  c.traverse(x=>{if(x.isMesh||x.isSprite){x.userData.f=f;x.userData.part=pid;x.userData.lab=f.d.lab;}});applyStyleTo(c);collect(f);}
