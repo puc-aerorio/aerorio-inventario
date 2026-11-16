@@ -182,9 +182,10 @@ button,input,textarea,select{font:inherit;color:inherit}
 
 /* mini silhueta de navegação */
 .mmap{display:flex;align-items:center;gap:6px}
-.msil{display:flex;flex-direction:column;gap:2px;padding:2px;border:2px solid var(--line);border-radius:4px;width:30px;cursor:pointer}
-.msil i{display:block;height:7px;border-radius:2px;background:var(--line);opacity:.45}
-.msil i.on{background:#0077C8;opacity:1}
+.msil{display:flex;flex-direction:column;gap:2px;padding:2px;border:2px solid var(--line);border-radius:4px;width:30px;height:36px;box-sizing:border-box;cursor:pointer;overflow:hidden}
+/* a altura da miniatura é fixa: as barras dividem o espaço, por mais partes que o móvel tenha (gaveteiro azul tem 8) */
+.msil i{display:block;flex:1 1 0;min-height:2px;max-height:7px;border-radius:1px;background:var(--line);opacity:.45}
+.msil i.on{background:#0077C8;opacity:1;min-height:4px;flex-grow:2}
 .msil.tb{border:0;border-top:3px solid var(--line);border-radius:0;padding:3px 0 0}
 
 /* organizadores e itens */
