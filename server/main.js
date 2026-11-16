@@ -157,7 +157,8 @@ function permitido_(eu, op) {
   if (!T || T.log || T.raw || !P[op.t]) return 'Sem permissão para alterar ' + op.t + '.';
   if (typeof op.id !== 'string' || !op.id || op.id.length > 80) return 'Identificador inválido.';
   const cols = [].concat(Object.keys(op.f || {}), Object.keys(op.i || {}));
-  const ok = P[op.t] === '*' ? T.app : P[op.t];
+  let ok = P[op.t] === '*' ? T.app : P[op.t];
+  if (op.t === 'MOVEIS' && eu.papel === 'Membro' && MOVEL_MEMBRO.indexOf(op.id) >= 0) ok = ['x', 'y', 'z', 'rotacao', 'etiqueta'];
   for (const c of cols) if (ok.indexOf(c) < 0) return 'Coluna não permitida: ' + op.t + '.' + c;
   for (const c of Object.keys(op.i || {})) if (!(INC[op.t] || []).includes(c) || typeof op.i[c] !== 'number') return 'Soma não permitida: ' + c;
   const av = ADMIN_VAL[op.t];
@@ -325,6 +326,28 @@ function semeia_(nome, linhas) {
   sh.getRange(2, 1, linhas.length, hdr.length).setValues(linhas.map(o => hdr.map(h => o[h] !== undefined ? o[h] : '')));
   return linhas.length;
 }
+/* acrescenta móveis/partes do modelo que faltam; móvel cujo "modelo" mudou recebe nome, número, lab, modelo e posição novos.
+   Nada é apagado: partes antigas que não existem mais ficam na aba, e o app simplesmente não as mostra. */
+function sincronizaModelo_() {
+  const res = { moveis_novos: 0, moveis_trocados: 0, partes_novas: 0 };
+  const mv = lerAba_('MOVEIS'), ci = k => mv.hdr.indexOf(k);
+  const novos = [];
+  SEED.moveis.forEach(m => {
+    const l = mv.linhas[mv.idx[m.id]];
+    if (!l) { novos.push(mv.hdr.map(h => m[h] !== undefined ? m[h] : '')); res.moveis_novos++; return; }
+    const atual = String(l.o.modelo || '');
+    if (atual && atual !== String(m.modelo)) {
+      ['numero', 'nome', 'laboratorio', 'modelo', 'x', 'y', 'z', 'rotacao'].forEach(k => { if (ci(k) >= 0) mv.sh.getRange(l.r, ci(k) + 1).setValue(m[k]); });
+      res.moveis_trocados++;
+    }
+  });
+  if (novos.length) mv.sh.getRange(mv.sh.getLastRow() + 1, 1, novos.length, mv.hdr.length).setValues(novos);
+  const pt = lerAba_('PARTES');
+  const pn = SEED.partes.filter(p => pt.idx[p.id] === undefined);
+  if (pn.length) pt.sh.getRange(pt.sh.getLastRow() + 1, 1, pn.length, pt.hdr.length).setValues(pn.map(o => pt.hdr.map(h => o[h] !== undefined ? o[h] : '')));
+  res.partes_novas = pn.length;
+  return res;
+}
 function instalar() {
   const ss = ss_();
   Object.keys(TABS).forEach((n, i) => garanteAba_(n, i));
@@ -336,6 +359,8 @@ function instalar() {
     etiquetas: semeia_('ETIQUETAS', SEED.etiquetas),
     classes: semeia_('CLASSES', SEED.classes),
   };
+  // planilha já em uso: traz móveis e partes novos do modelo 3D (e troca os que mudaram de modelo, ex.: Eletrônica refeita)
+  n.modelo = sincronizaModelo_();
   // configuração: só acrescenta chaves que faltam
   const cfg = lerAba_('CONFIG');
   const novas = SEED.config.filter(c => cfg.idx[c.chave] === undefined);

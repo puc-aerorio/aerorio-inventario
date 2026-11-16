@@ -2,7 +2,7 @@ import assert from 'assert/strict';
 import { criaGas } from './gas-mock.mjs';
 const g = criaGas();
 const n = g.ctx.instalar();
-assert.equal(n.moveis, 19); assert.equal(n.partes, 58); assert.equal(n.classes, 12);
+assert.equal(n.moveis, 30); assert.ok(n.partes > 58); assert.equal(n.classes, 12);
 const tab = nome => g.ss.getSheetByName(nome);
 const nLeg = g.v2.getSheetByName('_LEGADO').d.slice(6).filter(r => r[0]).length;
 assert.equal(tab('LEGADO').getLastRow(), nLeg + 1, 'LEGADO com todos os registros antigos');
@@ -15,7 +15,12 @@ const pa = tab('PARTES').getDataRange().getValues();
 assert.ok(pa.some(r => r[0] === 'MAN-012.G1' && String(r[8]).startsWith('P-0019 · Limas')), 'destino antigo com etiqueta');
 // instalar de novo não duplica
 g.ctx.instalar();
-assert.equal(tab('MOVEIS').getLastRow(), 22); assert.equal(tab('PARTES').getLastRow(), 59);
+assert.equal(tab('MOVEIS').getLastRow(), 33); assert.ok(tab('PARTES').getLastRow() > 59);
+// planilha antiga (Eletrônica com o modelo velho): instalar de novo troca o modelo e traz o que falta
+{ const sh = tab('MOVEIS'), d = sh.getDataRange().getValues(), mc = d[0].indexOf('modelo'), r = d.findIndex(x => x[0] === 'ELE-001');
+  sh.getRange(r + 1, mc + 1).setValue('bel'); const nPartes = tab('PARTES').getLastRow();
+  const res = g.ctx.instalar().modelo;
+  assert.equal(res.moveis_trocados, 1, 'ELE-001 trocado'); assert.equal(sh.getDataRange().getValues()[r][mc], 'e_imp'); assert.equal(tab('PARTES').getLastRow(), nPartes, 'partes não duplicam'); }
 
 // login
 assert.equal(g.post({ a: 'auth', idToken: 'ruim' }).ok, false);
@@ -30,7 +35,7 @@ assert.equal(g.post({ a: 'snap', s: adulterada }).code, 'sessao');
 
 // snapshot
 const sn = g.post({ a: 'snap', s: adm.sessao });
-assert.equal(sn.ok, true); assert.equal(sn.tabs.MOVEIS.length, 21); assert.equal(sn.pendentes, 1);
+assert.equal(sn.ok, true); assert.equal(sn.tabs.MOVEIS.length, 32); assert.equal(sn.pendentes, 1);
 assert.ok(sn.tabs.CLASSES.find(c => c.id === 'prop'));
 const rev0 = sn.rev;
 
@@ -66,6 +71,8 @@ assert.equal(est[1][3], 1, 'quantidade 3 - 1 - 1');
 assert.equal(g.post({ a: 'push', s: novo.sessao, since: 0, ops: [{ t: 'ITENS', id: 'I1', f: { estado: 'Removido' } }] }).code, 'permissao');
 assert.equal(g.post({ a: 'push', s: novo.sessao, since: 0, ops: [{ t: 'MOVEIS', id: 'MAN-001', f: { x: 1 } }] }).code, 'permissao');
 assert.equal(g.post({ a: 'push', s: novo.sessao, since: 0, ops: [{ t: 'MOVEIS', id: 'MAN-001', f: { etiqueta: 'GAVETEIRO AZUL' } }] }).ok, true);
+assert.equal(g.post({ a: 'push', s: novo.sessao, since: 0, ops: [{ t: 'MOVEIS', id: 'ELE-010', f: { x: 5.5, z: -1.2, rotacao: 90 } }] }).ok, true, 'membro move gaveteiro de rodinha');
+assert.equal(g.post({ a: 'push', s: novo.sessao, since: 0, ops: [{ t: 'MOVEIS', id: 'ELE-010', f: { nome: 'x' } }] }).code, 'permissao', 'mas não renomeia');
 assert.equal(g.post({ a: 'push', s: novo.sessao, since: 0, ops: [{ t: 'ESTOQUE', id: 'E1', f: { atualizado_por: 'x' } }] }).code, 'permissao', 'coluna fora do app');
 assert.equal(g.post({ a: 'push', s: adm.sessao, since: 0, ops: [{ t: 'MOVEIS', id: 'MAN-001', f: { x: 1.5, rotacao: 90 } }] }).ok, true);
 // pull

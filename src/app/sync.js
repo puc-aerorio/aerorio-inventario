@@ -1,12 +1,12 @@
 import { CFG, LIVE } from '../config.js';
 import { TABS, INC, OFFCOL, OFFVAL, applyOp, dataTxt, dataMs } from '../data/schema.js';
-import { MOVEL_ID } from '../data/mapa.js';
+import { MOVEL_ID, LAB_NOME } from '../data/mapa.js';
 import { $, F, S, app, wake } from './state.js';
 import { IC, P } from './icons.js';
 import { BUY, CL, COMPRADOS, ESTADOS, ETQ, HOOK, ITEMS, LOG, M, NIVEIS, OT, PESSOAS, RECADO, SEM, SPECK, SUG, TIPOEMP, allLoc, etqOf, log, norm, save, uid } from './data.js';
 import { toast } from './html.js';
 import { setRecado } from './room.js';
-import { buildContents, measure } from './furniture.js';
+import { relaciona, mudaLab, buildContents, measure } from './furniture.js';
 import { closeModal, modal, refreshBadges, refreshCards, setRole } from './ui.js';
 import { admClick, admListH } from './mobile.js';
 import { mob } from './state.js';
@@ -56,7 +56,7 @@ export const sidP = (m, p) => `${sidM(m)}.${p.id}`;
 export function achata() {
   const db = {}; ABAS_APP.forEach(t => db[t] = {});
   for (const m of M) {
-    db.MOVEIS[sidM(m)] = { x: r3(m.pos[0]), y: r3(m.pos[1]), z: r3(m.pos[2]), rotacao: grau(m.rot || 0), etiqueta: etqTxt(m.etq) };
+    db.MOVEIS[sidM(m)] = { x: r3(m.pos[0]), y: r3(m.pos[1]), z: r3(m.pos[2]), rotacao: grau(m.rot || 0), etiqueta: etqTxt(m.etq), laboratorio: LAB_NOME[m.lab] || '' };
     for (const p of m.partes) {
       db.PARTES[sidP(m, p)] = { nome: p.etqNome ? '' : txt(p.nomeP), etiqueta: etqTxt(p.etq), cheia: p.cheia ? 'Sim' : '', conferido_em: p.conf ? dataTxt(p.conf.em) : '', conferido_por: p.conf ? txt(p.conf.por) : '' };
       for (const o of p.orgs) db.ORGANIZADORES[o.id] = org(o, sidP(m, p));
@@ -151,6 +151,7 @@ export function hidrata(db) {
       if (r.x !== '' && r.x != null && r.z !== '' && r.z != null) m.pos = [+r.x, +r.y || 0, +r.z];
       if (r.rotacao !== '' && r.rotacao != null) m.rot = (+r.rotacao || 0) * Math.PI / 180;
       m.etq = etqId(r.etiqueta); m.inativo = r.estado === 'Inativo';
+      { const lb = Object.keys(LAB_NOME).find(k => LAB_NOME[k] === txt(r.laboratorio)); if (lb) m.lab = lb; }
     } else m.sid = sidM(m);
     for (const p of m.partes) {
       const pr = (db.PARTES || {})[sidP(m, p)];
@@ -232,9 +233,10 @@ export function aplicaNaTela() {
   hidrata(vista());
   for (const f of F) {
     const [x, y, z, r] = pos.get(f), m = f.d;
-    if (x !== m.pos[0] || y !== m.pos[1] || z !== m.pos[2] || r !== m.rot) { f.g.position.set(m.pos[0], m.pos[1], m.pos[2]); f.g.rotation.y = m.rot; try { measure(f); } catch (e) { } }
+    if (x !== m.pos[0] || y !== m.pos[1] || z !== m.pos[2] || r !== m.rot) { f.g.position.set(m.pos[0], m.pos[1], m.pos[2]); f.g.rotation.y = m.rot; if (f.meshes && f.meshes[0] && f.meshes[0].userData.lab !== m.lab) mudaLab(f, m.lab); try { measure(f); } catch (e) { } }
     for (const p of m.partes) if (antes.get(p) !== assinatura(p)) try { buildContents(f, p.id); } catch (e) { console.warn(e); }
   }
+  try { relaciona(); } catch (e) { }
   sombra = achata(); wake(1500);
   try { refreshCards(); } catch (e) { console.warn(e); }
   try { refreshBadges(); } catch (e) { }

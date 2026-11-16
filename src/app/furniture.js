@@ -29,8 +29,8 @@ export function gaveta(g,x0,x1,y0,y1,zf,D,c,parts,id,o={}){// gaveta: frente + b
  const dg=new THREE.Group();g.add(dg);const w=x1-x0,h=y1-y0,cx=(x0+x1)/2;
  X(dg,x0+.006,x1-.006,y0+.005,y1-.005,zf-.018,zf,c,o.role||'clay',o.mo);
  if(o.puxador!==false)X(dg,cx-.05,cx+.05,y1-.04,y1-.025,zf,zf+.012,'#c3c8cb','clay',{m:.6,r:.35});
- const tray=new THREE.Group();tray.position.set(cx,y0+.02,zf-.02-D/2);dg.add(tray);const tw=w-.05,th=Math.max(.04,h-.05);
- box(tray,tw,.008,D,0,0,0,'#d5dade');box(tray,tw,th,.008,0,th/2,-D/2,'#d5dade');box(tray,.008,th,D,-tw/2,th/2,0,'#d5dade');box(tray,.008,th,D,tw/2,th/2,0,'#d5dade');
+ const tray=new THREE.Group();tray.position.set(cx,y0+.02,zf-.02-D/2);dg.add(tray);const tw=w-.05,th=Math.max(.04,h-.05),tc=o.tray||'#d5dade';
+ box(tray,tw,.008,D,0,0,0,tc);box(tray,tw,th,.008,0,th/2,-D/2,tc);box(tray,.008,th,D,-tw/2,th/2,0,tc);box(tray,.008,th,D,tw/2,th/2,0,tc);
  parts[id]=part(tray,.006,tw-.03,D-.04,th,'drawer',{obj:dg});return dg;}
 export function portas(f,g,W,y0,y1,zf,c,num){// duas portas de abrir com puxador de barra (armários baixos e armário 10)
  const doors={open:0,l:new THREE.Group(),r:new THREE.Group()};doors.l.position.set(-W/2,0,zf);doors.r.position.set(W/2,0,zf);g.add(doors.l,doors.r);
@@ -65,6 +65,64 @@ export const BUILD_ID={
   const parts={};[H-.02,.48,.15].forEach((y,i)=>{const b=X(g,-W/2,W/2,y,y+.02,-D/2,D/2,c,'color',{m:.35});X(g,-W/2,W/2,y+.02,y+.045,D/2-.01,D/2,c,'color');X(g,-W/2,W/2,y+.02,y+.045,-D/2,-D/2+.01,c,'color');parts['N'+(i+1)]=part(g,y+.02,W-.08,D-.06,i?.28:.3,'shelf',{board:b});});
   return {g,parts};}};
 Object.assign(BUILD,{
+ /* ===== Lab de Eletrônica (fotos de 13/11) ===== */
+ /* mesa de escritório com tampo branco, borda escura e pés de painel pretos; com R>0 vira mesa em L com canto interno curvo */
+ mesaL(f){const d=f.d,W=d.W||1.6,D=d.D||.7,H=.75,R=d.R||0,RW=d.RW||.6,s=d.lado||1,g=new THREE.Group(),parts={},wh='#eef0ed',bk='#24272a';
+  const ex=s*W/2,ix=ex-s*RW,r=.22;const sh=new THREE.Shape();
+  const P=(x,z)=>[x,z];const pts=[];
+  if(R>0){pts.push(P(-ex,-D/2),P(ex,-D/2),P(ex,D/2+R),P(ix,D/2+R),P(ix,D/2+r));}else pts.push(P(-W/2,-D/2),P(W/2,-D/2),P(W/2,D/2));
+  sh.moveTo(...pts[0]);for(const q of pts.slice(1))sh.lineTo(...q);
+  if(R>0){if(s>0)sh.absarc(ix-r,D/2+r,r,0,-Math.PI/2,true);else sh.absarc(ix+r,D/2+r,r,Math.PI,1.5*Math.PI,false);sh.lineTo(-ex,D/2);}else sh.lineTo(-W/2,D/2);
+  const tampo=(y0,y1,c,role,o)=>{const geo=new THREE.ExtrudeGeometry(sh,{depth:y1-y0,bevelEnabled:false,curveSegments:10});geo.rotateX(Math.PI/2);geo.translate(0,y1,0);return mesh(g,geo,c,role,0,0,0,o);};
+  tampo(H-.034,H-.006,bk,'color',{m:.2,r:.6});const top=tampo(H-.006,H,wh,'clay');
+  /* pé de quadro preto: duas colunas, travessa no alto e sapata no chão (como nas fotos) */
+  const perna=(x,z0,z1)=>{for(const z of[z0+.07,z1-.07])X(g,x-.022,x+.022,.03,H-.034,z-.022,z+.022,bk,'color',{m:.3});X(g,x-.02,x+.02,H-.08,H-.034,z0+.05,z1-.05,bk,'color',{m:.3});X(g,x-.03,x+.03,0,.035,z0,z1,bk,'color',{m:.3});};
+  const pernaX=(x0,x1,z)=>{for(const x of[x0+.07,x1-.07])X(g,x-.022,x+.022,.03,H-.034,z-.022,z+.022,bk,'color',{m:.3});X(g,x0+.05,x1-.05,H-.08,H-.034,z-.02,z+.02,bk,'color',{m:.3});X(g,x0,x1,0,.035,z-.03,z+.03,bk,'color',{m:.3});};
+  perna(-ex+s*.06,-D/2+.02,D/2-.02);
+  if(R>0)pernaX(Math.min(ix,ex)+.02,Math.max(ix,ex)-.02,D/2+R-.07);
+  else perna(W/2-.06,-D/2+.02,D/2-.02);
+  if(d.gav){const gw=.42,gx0=R>0?(s>0?ix-gw-.03:ix+.03):(W/2-gw-.08),gx1=gx0+gw,gd=D-.12,zf=D/2-.04;// gaveteiro branco de 3 gavetas sob o tampo
+   X(g,gx0,gx1,H-.06,H-.034,-D/2+.06,zf,wh);X(g,gx0,gx0+.018,.06,H-.06,-D/2+.06,zf,wh);X(g,gx1-.018,gx1,.06,H-.06,-D/2+.06,zf,wh);X(g,gx0,gx1,.06,.08,-D/2+.06,zf,wh);
+   for(const [x,z] of[[gx0+.05,-D/2+.12],[gx1-.05,-D/2+.12],[gx0+.05,zf-.05],[gx1-.05,zf-.05]])mesh(g,new THREE.CylinderGeometry(.022,.022,.05,10),'#222','color',x,.025,z);
+   const ys=[.08,.3,.5,H-.06];for(let i=0;i<3;i++)gaveta(g,gx0+.018,gx1-.018,ys[2-i],ys[3-i],zf,gd-.06,wh,parts,'G'+(i+1));}
+  const ua=R>0?-ex:-W/2,ub=R>0?ix-s*(d.gav?.47:0):(d.gav?W/2-.52:W/2);const ux=(ua+ub)/2,uw=Math.abs(ub-ua)-.1;parts.T=part(g,H,(R>0?W-RW:W)-.1,D-.08,.5,'top',{x:R>0?-s*RW/2:0,board:top});
+  if(R>0)parts.T2=part(g,H,RW-.08,R+D-.1,.5,'top',{x:ex-s*RW/2,z:R/2,board:top});
+  /* embaixo do lado curto: é onde os gaveteiros de rodinha costumam ficar (encaixe) */
+  if(R>0)parts.U2=part(g,.01,RW-.1,R+D-.16,.5,'under',{x:ex-s*RW/2,z:R/2,board:top});
+  const slots=R>0?[{x:ex-s*RW/2,z:D/2+R-.45,rot:-s*Math.PI/2,parte:'U2'}]/* gavetas viradas para o lado onde entra a cadeira */:[{x:W/2-.32,z:0,rot:0,parte:'U'}];
+  parts.U=part(g,.01,uw,D-.12,.5,'under',{x:ux,board:top});
+  return {g,parts,slots};},
+ /* gaveteiro volante branco (rodízios, borda preta no tampo) */
+ gavvol(f){const d=f.d,W=.46,D=.55,H=.64,n=d.n||2,g=new THREE.Group(),parts={},wh='#eef0ed';
+  for(const [x,z] of[[-.17,-.2],[.17,-.2],[-.17,.2],[.17,.2]])mesh(g,new THREE.CylinderGeometry(.025,.025,.05,10),'#222','color',x,.025,z);
+  X(g,-W/2,W/2,.05,.07,-D/2,D/2,wh);X(g,-W/2,-W/2+.018,.05,H-.03,-D/2,D/2,wh);X(g,W/2-.018,W/2,.05,H-.03,-D/2,D/2,wh);X(g,-W/2,W/2,.05,H-.03,-D/2,-D/2+.015,wh);
+  X(g,-W/2-.005,W/2+.005,H-.034,H-.008,-D/2-.005,D/2+.005,'#24272a','color',{m:.2});const top=X(g,-W/2,W/2,H-.008,H,-D/2,D/2,wh);
+  /* gaveta de baixo um pouco maior; interior preto */
+  const y0=.07,y1=H-.034,hs=n===2?[.45,.55]:Array(n).fill(1/n);let yy=y1;for(let i=0;i<n;i++){const h=(y1-y0)*hs[i];gaveta(g,-W/2+.018,W/2-.018,yy-h,yy,D/2,D-.08,wh,parts,'G'+(i+1),{tray:'#1d2024'});yy-=h;}
+  parts.A=part(g,H,W-.04,D-.04,.45,'above',{board:top});return {g,parts};},
+ /* gaveteiro fixo: 4 gavetas iguais, tampo na altura das mesas */
+ gavfixo(f){const W=.46,D=.55,H=.75,g=new THREE.Group(),parts={},wh='#eef0ed';
+  X(g,-W/2,W/2,0,.06,-D/2,D/2,'#d7dadb');X(g,-W/2,-W/2+.018,.06,H-.02,-D/2,D/2,wh);X(g,W/2-.018,W/2,.06,H-.02,-D/2,D/2,wh);X(g,-W/2+.018,W/2-.018,.06,H-.02,-D/2,-D/2+.015,wh);const top=X(g,-W/2-.01,W/2+.01,H-.02,H,-D/2-.01,D/2+.01,wh);
+  const h=(H-.02-.06)/4;for(let i=0;i<4;i++)gaveta(g,-W/2+.018,W/2-.018,H-.02-(i+1)*h,H-.02-i*h,D/2,D-.08,wh,parts,'G'+(i+1));
+  const lk=mesh(g,new THREE.CylinderGeometry(.01,.01,.01,10),'#aab0bb','color',W/2-.06,H-.06,D/2+.012);lk.rotation.x=Math.PI/2;
+  parts.A=part(g,H,W-.04,D-.04,.5,'above',{board:top});return {g,parts};},
+ /* gaveteiro azul: móvel pequeno que vive em cima de tampos */
+ gavazul(f){const bw=.36,bd=.3,bh=.31,g=new THREE.Group(),parts={},az='#1f4c96';const A=(a,b,c2,d2,e,f2)=>X(g,a,b,c2,d2,e,f2,az,'color',{m:.3,r:.5});
+  A(-bw/2,bw/2,0,.015,-bd/2,bd/2);A(-bw/2,-bw/2+.015,.015,bh-.015,-bd/2,bd/2);A(bw/2-.015,bw/2,.015,bh-.015,-bd/2,bd/2);A(-bw/2+.015,bw/2-.015,.015,bh-.015,-bd/2,-bd/2+.012);const tb=A(-bw/2,bw/2,bh-.015,bh,-bd/2,bd/2);
+  const hb=(bh-.03)/4;for(let i=0;i<4;i++)gaveta(g,-bw/2+.015,bw/2-.015,bh-.015-(i+1)*hb,bh-.015-i*hb,bd/2,bd-.06,'#c9ced3',parts,'B'+(i+1),{role:'color',mo:{m:.3,r:.5}});
+  parts.A=part(g,bh,bw-.04,bd-.04,.3,'above',{board:tb});return {g,parts};},
+ /* estante suspensa: 3 prateleiras do teto para baixo, laterais até o chão; embaixo cabe uma mesa */
+ estSusp(f){const d=f.d,W=d.W||1.3,D=.5,top=d.H||2.55,g=new THREE.Group(),parts={},wh='#e9ece9',t=.03,n=3,sp=.4;
+  X(g,-W/2,-W/2+t,0,top,-D/2,D/2,wh);X(g,W/2-t,W/2,0,top,-D/2,D/2,wh);X(g,-W/2+t,W/2-t,top-n*sp-.02,top,-D/2,-D/2+.012,'#dfe2df');
+  const bs=[];for(let k=0;k<=n;k++){const y=top-k*sp;bs.push(X(g,-W/2+t,W/2-t,y-.022,y,-D/2+.012,D/2,wh));}
+  for(let i=1;i<=n;i++){const yb=top-(n-i+1)*sp;parts['N'+i]=part(g,yb,W-.1,D-.05,sp-.05,'shelf',{board:bs[n-i+1]});}
+  const yb=top-n*sp-.022;parts.U=part(g,.012,W-.1,D-.06,Math.min(1.3,yb-.05),'under',{board:bs[n]});return {g,parts};},
+ /* estante alta branca, laterais e fundo fechados */
+ estanteAlta(f){const d=f.d,W=d.W||.95,D=.4,H=d.H||2.05,n=d.n||5,g=new THREE.Group(),parts={},wh='#e9ece9';
+  X(g,-W/2,-W/2+.02,0,H,-D/2,D/2,wh);X(g,W/2-.02,W/2,0,H,-D/2,D/2,wh);X(g,-W/2,W/2,0,H,-D/2,-D/2+.012,'#dfe2df');
+  const ys=[];for(let k=0;k<=n;k++)ys.push(.06+k*(H-.08)/n);const bs=ys.map(y=>X(g,-W/2+.02,W/2-.02,y-.02,y,-D/2+.012,D/2,wh));
+  for(let i=1;i<=n;i++){const k=n-i;parts['N'+i]=part(g,ys[k],W-.08,D-.05,ys[k+1]-ys[k]-.04,'shelf',{board:bs[k]});}
+  parts.A=part(g,ys[n],W-.06,D-.04,.3,'above',{board:bs[n]});return {g,parts};},
  suspenso(f){const d=f.d,W=d.W||1.3,D=.45,yb=d.yb||1.42,yt=yb+.6,t=.025,ad=.38,c=d.real||WHITE,g=new THREE.Group();// armário suspenso: suportes laterais até o chão, portas de correr esquerda/direita
   X(g,-W/2,-W/2+t,0,yt,-D/2,D/2,c);X(g,W/2-t,W/2,0,yt,-D/2,D/2,c);X(g,-W/2+t,W/2-t,yt-t,yt,-D/2,-D/2+ad,c);const bot=X(g,-W/2+t,W/2-t,yb,yb+.02,-D/2,-D/2+ad,c);X(g,-W/2+t,W/2-t,yb,yt,-D/2,-D/2+.012,c);
   const half=(W-2*t)/2,zf=-D/2+ad,parts={};
@@ -163,14 +221,56 @@ export function collect(f){f.meshes=[];f.sprites=[];f.g.traverse(o=>{if(o.isMesh
 export function measure(f){f.g.updateMatrixWorld(true);const bb=new THREE.Box3();f.g.traverse(o=>{if(o.isMesh&&o.userData.base)bb.expandByObject(o);});f.center=bb.getCenter(new THREE.Vector3());const s=bb.getSize(new THREE.Vector3());
  f.bb=bb.clone();f.anchor=new THREE.Vector3(f.center.x,bb.max.y+.08,f.center.z);f.size=Math.max(s.x,s.y,s.z);f.rad=Math.max(s.x,s.z)/2+.3;f.h=s.y;if(f.ring){f.ring.position.set(f.center.x,.012,f.center.z);f.ring.scale.setScalar(f.rad);}}
 export const byId=id=>F.find(f=>f.d.id===id);
+/* ===== móveis dentro de móveis =====
+   classe do móvel que pode ficar "dentro" de outro: 'gav' (gaveteiro de rodinha), 'mesa' (bancadas e mesas), 'topo' (gaveteiro azul, vive em cima de tampos).
+   quem aceita o quê embaixo: estantes/armários suspensos aceitam mesas e gaveteiros; mesas aceitam gaveteiros; áreas aceitam gaveteiros. */
+export const ACEITA={estSusp:['mesa','gav'],suspenso:['mesa','gav'],mesaL:['gav'],bancada:['gav'],mesa:['gav'],serra:['gav'],computador:['gav'],lugar:['gav']};
+export const classeMovel=d=>d.tipo==='gavvol'?'gav':d.tipo==='gavazul'?'topo':({mesaL:1,bancada:1,serra:1,computador:1}[d.tipo]?'mesa':null);
+const tv=new THREE.Vector3();
+function dentroParte(f,pid,p,tol){const pt=f.parts[pid];const v=pt.content.worldToLocal(tv.copy(p));return Math.abs(v.x)<=pt.w/2+tol&&Math.abs(v.z)<=pt.d/2+tol;}
+function dentroBB(f,p,tol){return p.x>=f.bb.min.x-tol&&p.x<=f.bb.max.x+tol&&p.z>=f.bb.min.z-tol&&p.z<=f.bb.max.z+tol;}
+/* onde um móvel está (ou estaria, em pos): {f,pid,y} — pid nulo quando o hospedeiro não tem parte "embaixo" (armários suspensos da Manufatura) */
+export function hospedeiro(c,pos){const cl=classeMovel(c.d);if(!cl)return null;pos=pos||c.g.position;let best=null;
+ for(const h of F){if(h===c||h.d.lab!==c.d.lab||!h.bb)continue;
+  if(cl==='topo'){for(const [pid,pt] of Object.entries(h.parts))if((pt.k==='top'||pt.k==='above')&&dentroParte(h,pid,pos,0)){h.g.updateMatrixWorld();const y=pt.content.getWorldPosition(new THREE.Vector3()).y;if(!best||y>best.y)best={f:h,pid,y};}continue;}
+  if(!(ACEITA[h.d.tipo]||[]).includes(cl))continue;
+  const us=Object.entries(h.parts).filter(([pid,pt])=>pt.k==='under'||h.d.tipo==='lugar');
+  if(us.length){for(const [pid,pt] of us)if(dentroParte(h,pid,pos,.03)){const a=pt.w*pt.d;if(!best||a<best.a)best={f:h,pid,a};}}
+  else if(dentroBB(h,pos,-.05)){const a=(h.bb.max.x-h.bb.min.x)*(h.bb.max.z-h.bb.min.z);if(!best||a<best.a)best={f:h,pid:null,a};}}
+ return best;}
+/* refaz as relações (depois de construir, mover ou receber posições da planilha) */
+export function relaciona(){for(const f of F){f.host=null;f.filhos=[];}
+ for(const c of F){const h=hospedeiro(c,c.g.position);if(h&&(classeMovel(c.d)!=='topo'||Math.abs(h.y-c.g.position.y)<.08)){c.host=h;h.f.filhos.push({f:c,pid:h.pid});}}}
+/* um gaveteiro embaixo de mesa/estante perde o "em cima" (o tampo do hospedeiro está logo acima) */
+export const semTopo=f=>!!(f.host&&classeMovel(f.d)==='gav'&&f.host.f.d.tipo!=='lugar');
+/* troca o laboratório de um móvel (rótulos dos meshes; o estilo é reaplicado por quem chama) */
+export function mudaLab(f,lab){f.d.lab=lab;f.g.traverse(o=>{if(o.isMesh||o.isSprite)o.userData.lab=lab;});}
+/* caixa do móvel no próprio referencial (não muda ao mover; calculada uma vez) */
+export function bbLocal(f){if(f.bbL)return f.bbL;f.g.updateMatrixWorld(true);const inv=f.g.matrixWorld.clone().invert(),b=new THREE.Box3(),m4=new THREE.Matrix4();
+ f.g.traverse(o=>{if(o.isMesh&&o.userData.base){if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();b.union(o.geometry.boundingBox.clone().applyMatrix4(m4.multiplyMatrices(inv,o.matrixWorld)));}});return f.bbL=b;}
+/* pontos de encaixe de um hospedeiro para um móvel: os do próprio móvel (gaveteiros sob o lado curto das mesas em L);
+   senão, encostado no fundo do hospedeiro — centralizado (mesa sob armário/estante suspensa) ou numa ponta (gaveteiro sob bancada) */
+export function slotsPara(h,c){const cl=classeMovel(c.d);if(cl==='gav'&&h.slots&&h.slots.length)return h.slots;if(h.d.tipo==='lugar')return [];
+ const H=bbLocal(h),C=bbLocal(c);const z=H.min.z-C.min.z+.02;
+ if(cl==='mesa')return [{x:(H.min.x+H.max.x)/2-(C.min.x+C.max.x)/2,z,rot:0}];
+ return [{x:H.max.x-C.max.x-.06,z,rot:0}];}
+/* encaixe enquanto arrasta um móvel de rodinha: devolve {x,y,z,rot,host} ou null quando não pode ficar ali */
+export function encaixe(f,x,z){const cl=classeMovel(f.d);const p=new THREE.Vector3(x,0,z);
+ if(cl==='topo'){const h=hospedeiro(f,p);if(!h)return null;const pt=h.f.parts[h.pid];const v=pt.content.worldToLocal(p.clone());const mx=Math.max(0,pt.w/2-.18),mz=Math.max(0,pt.d/2-.15);
+  v.x=Math.max(-mx,Math.min(mx,v.x));v.z=Math.max(-mz,Math.min(mz,v.z));if(Math.hypot(v.x,v.z)<.12){v.x=0;v.z=0;}v.y=0;pt.content.localToWorld(v);return {x:v.x,y:h.y,z:v.z,rot:f.g.rotation.y,host:h};}
+ let best=null;for(const h of F){if(h===f||h.d.lab!==f.d.lab||!(ACEITA[h.d.tipo]||[]).includes(cl))continue;
+  for(const sl of slotsPara(h,f)){h.g.updateMatrixWorld();const w=h.g.localToWorld(new THREE.Vector3(sl.x,0,sl.z));const dd=Math.hypot(w.x-x,w.z-z);if(dd<.55&&(!best||dd<best.dd))best={dd,x:w.x,z:w.z,rot:h.g.rotation.y+sl.rot,h,pid:sl.parte};}}
+ if(best)return {x:best.x,y:0,z:best.z,rot:best.rot,host:{f:best.h,pid:best.pid}};
+ return {x,y:0,z,rot:f.g.rotation.y,host:hospedeiro(f,p)};}
 export const partW=(f,pid)=>{const v=new THREE.Vector3();f.parts[pid].content.getWorldPosition(v);return v;};
 
 M.forEach(d=>{const f={d,v:{hover:0},cut:0};const clay=new THREE.Color(d.real).lerp(new THREE.Color('#dedbd6'),.4);
- const b=(BUILD_ID[d.id]||BUILD[d.tipo])(f,'#'+clay.getHexString());f.g=b.g;f.parts=b.parts;f.g.position.set(...d.pos);f.g.rotation.y=d.rot;scene.add(f.g);F.push(f);
+ const b=(BUILD_ID[d.id]||BUILD[d.tipo])(f,'#'+clay.getHexString());f.g=b.g;f.parts=b.parts;f.slots=b.slots||[];f.g.position.set(...d.pos);f.g.rotation.y=d.rot;scene.add(f.g);F.push(f);
  for(const [pid,pt] of Object.entries(f.parts)){pt.halo.userData.halo={f,pid};halos.push(pt.halo);}
  for(const p of d.partes)buildContents(f,p.id);collect(f);measure(f);
  const pts=[];for(let i=0;i<=96;i++){const a=i/96*Math.PI*2;pts.push(new THREE.Vector3(Math.cos(a),0,Math.sin(a)));}
  const ring=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:0x0077C8,dashSize:.1,gapSize:.07,transparent:true,opacity:0}));
  ring.computeLineDistances();ring.raycast=()=>{};ring.visible=false;scene.add(ring);f.ring=ring;f.ringO=0;measure(f);
  const bd=document.createElement('div');bd.className='badge';app.appendChild(bd);f.badge=bd;});
+relaciona();
 

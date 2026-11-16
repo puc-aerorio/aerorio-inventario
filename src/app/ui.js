@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import { $, F, LITE, RENDER, S, UIH, app, halos, mob, pick, ray, wake } from './state.js';
+import { $, F, FADE, LITE, RENDER, S, UIH, WL, app, halos, mob, pick, ray, wake } from './state.js';
 import { IC, P } from './icons.js';
 import { BUY, CL, COMPRADOS, DAY, E, ESTADOS, ETQ, IT, ITEMS, LABS, LOG, M, NIVEIS, O, OCOL, OT, OTK, PESSOAS, RECADO, SEM, SPECK, SZ, TIPOEMP, U, alertsOf, allLoc, byLab, clean, countable, etqOf, findOrg, identOp, isAlert, locE, log, norm, orgName, partName, pathOf, resetDemo, save, stats, sugCl, touch, uid, unitsOf, usedEtq, walk } from './data.js';
 import { can, clsH, clsIconsH, cntH, heroH, isAdmin, odoH, odoSet, orgFront, orgIso, ostackH, qrSvg, relRect, tagH, toast } from './html.js';
 import { fly, runTweens, tween, tweens, wait } from './tween.js';
 import { DIR, camera, controls, fitD, labG, renderer, scene } from './scene.js';
-import { LABGLOW, atrasDeParede, fyW, inLab, roomTick, setRecado, viewMode } from './room.js';
-import { ghostPost, ghostPre, post } from './post.js';
+import { LABGLOW, OCC, OFF, PLANTA_R, atrasDeParede, occAgora, fyW, inLab, roomTick, setRecado, viewMode } from './room.js';
+import { GH, ghostPost, ghostPre, post } from './post.js';
 import { applyStyle, applyStyleTo } from './style.js';
-import { buildContents, buildOrg, byId, measure, partW, piece } from './furniture.js';
+import { buildContents, buildOrg, byId, measure, partW, piece, ACEITA, bbLocal, classeMovel, encaixe, mudaLab, relaciona, semTopo } from './furniture.js';
 import { bestDir, frontOf, camTo, ensureLab, focusF, focusLab, focusOrg, focusPart, goHome, labChip, orgOpen, setOpen, updateCut, updateLabChip } from './camera.js';
 
 /* ================= laboratório (primeiro nível) ================= */
@@ -46,7 +46,7 @@ stackEl.addEventListener('mouseover',ev=>{const s=ev.target.closest('[data-part]
 stackEl.addEventListener('mouseout',ev=>{const s=ev.target.closest('[data-part]');if(s&&!s.contains(ev.relatedTarget))setHoverPart(null,'card');});
 export function nodeOf(e){return e.t==='m'?e.f.d:e.t==='p'?e.p:e.t==='o'?e.o:null;}
 export function refOf(e){return e.t==='m'?'m:'+e.f.d.id:e.t==='p'?`p:${e.f.d.id}/${e.p.id}`:'o:'+e.o.id;}
-export const visParts=(f,carry)=>f.d.partes.filter(p=>p.id!=='A'||p.itens.length||p.orgs.length||carry);
+export const visParts=(f,carry)=>f.d.partes.filter(p=>p.id!=='A'||(!semTopo(f)&&(p.itens.length||p.orgs.length||carry)));
 export function cardHead(e){const i=S.stack.indexOf(e);const prev=S.stack[i-1];
  const back=prev?`<button class="back" data-b="back">${IC.back}${prev.t==='m'?prev.f.d.nome:prev.t==='p'?partName(prev.f.d,prev.p):prev.t==='o'?orgName(prev.o):''}</button>`:`<button class="back" data-b="close">${IC.back}${byLab(e.f.d.lab).nome.replace('Laboratório de ','Lab. de ')}</button>`;
  let nav='',title='',tag='',code='';
@@ -63,17 +63,19 @@ export function subH(f,p){const st=stats(p);const carry=S.carry;const dis=carry&
  return `<div class="sub ${carry&&!dis?'drop':''} ${dis?'dis':''} ${empty?'empty':''} ${S.hoverPart&&S.hoverPart.f===f&&S.hoverPart.pid===p.id?'hov':''} ${p.id==='A'?'above':''}" data-part="${p.id}">
   <span class="sn">${partName(f.d,p)}${p.etq&&!p.etqNome?`<span class="plabel" style="pointer-events:none;font-size:.62rem">${etqOf(p.etq).t}</span>`:''}${p.cheia?'<span class="full">CHEIA</span>':''}</span>${empty?'<span class="cnt" style="font-size:.8rem">vazio</span>':cntH({u:st.u,org:0,al:st.al})}
   ${empty?'':`<div class="sx"><span class="clsrow">${clsIconsH(st)}</span>${ostackH(p.orgs)}</div>`}</div>`;}
-export function silhH(f){const d=f.d,ps=visParts(f,!!S.carry);const g=id=>d.partes.find(p=>p.id===id);const above=ps.find(p=>p.id==='A');let h=above?subH(f,above):'';
+export function silhH(f){const d=f.d,ps=visParts(f,!!S.carry);const g=id=>d.partes.find(p=>p.id===id);const above=ps.find(p=>p.id==='A');let h=semTopo(f)?`<button class="hostTop" data-b="vai" data-id="${f.host.f.d.id}">${IC.up||''}<span>Embaixo de <b>${f.host.f.d.nome}</b></span></button>`:above?subH(f,above):'';
  if(d.tipo==='suspenso'){h+=`<div class="cab sus">${ps.filter(p=>p.id==='PE'||p.id==='PD').map(p=>`<div class="lvl">${subH(f,p)}</div>`).join('')}</div>`;const u=ps.find(p=>p.id==='U');if(u)h+=`<div class="susU"><i></i>${subH(f,u)}<i></i></div>`;return `<div class="silh">${h}</div>`;}
  if(d.tipo==='lugar'){h+=`<div class="lugarS">${ps.map(p=>subH(f,p)).join('')}</div>`;return `<div class="silh">${h}</div>`;}
- if(d.tipo==='estante')h+=`<div class="shv">${ps.filter(p=>p.id[0]==='N').map(p=>`<div class="lvl">${subH(f,p)}</div>`).join('')}</div>`;
+ if(d.tipo==='estSusp'){h+=`<div class="shv">${ps.filter(p=>p.id[0]==='N').map(p=>`<div class="lvl">${subH(f,p)}</div>`).join('')}</div>`;const u=ps.find(p=>p.id==='U');if(u)h+=`<div class="susU"><i></i>${subH(f,u)}<i></i></div>`;return `<div class="silh">${h}</div>`;}
+ if(d.tipo==='estante'||d.tipo==='estanteAlta')h+=`<div class="shv">${ps.filter(p=>p.id[0]==='N').map(p=>`<div class="lvl">${subH(f,p)}</div>`).join('')}</div>`;
  else if(d.tipo==='armario')h+=`<div class="cab">${ps.filter(p=>p.id[0]==='P').map(p=>`<div class="lvl">${subH(f,p)}</div>`).join('')}</div>`;
- else if(d.tipo==='gaveteiro')h+=`<div class="gvb">${ps.filter(p=>p.id[0]==='G').map(p=>subH(f,p)).join('')}</div>`;
- else{const gs=ps.filter(p=>p.id[0]==='G');h+=`<div class="tbl"><div class="tt">${subH(f,g('T'))}</div><div class="lg">${g('U')?subH(f,g('U')):'<div style="height:46px;flex:1"></div>'}${gs.length?`<div class="gvb mini">${gs.map(p=>subH(f,p)).join('')}</div>`:''}<div class="floor"></div></div></div>`;}
+ else if(d.tipo==='gaveteiro'||d.tipo==='gavvol'||d.tipo==='gavfixo')h+=`<div class="gvb">${ps.filter(p=>p.id[0]==='G').map(p=>subH(f,p)).join('')}</div>`;
+ else if(d.tipo==='gavazul')h+=`<div class="gvb az">${ps.filter(p=>p.id[0]==='B').map(p=>subH(f,p)).join('')}</div>`;
+ else{const gs=ps.filter(p=>p.id[0]==='G');h+=`<div class="tbl"><div class="tt">${subH(f,g('T'))}${g('T2')?subH(f,g('T2')):''}</div><div class="lg">${g('U')?subH(f,g('U')):'<div style="height:46px;flex:1"></div>'}${g('U2')?subH(f,g('U2')):''}${gs.length?`<div class="gvb mini">${gs.map(p=>subH(f,p)).join('')}</div>`:''}<div class="floor"></div></div></div>`;}
  return `<div class="silh">${h}</div>`;}
 export function renderCard(e){const sc=e.el.querySelector('.sb')?.scrollTop||0;let b='';
- if(e.t==='m'){b+=heroH(e.f.d)+silhH(e.f);}
- else if(e.t==='p'){const p=e.p;b+=heroH(p);
+ if(e.t==='m'){b+=heroH(e.f.d)+encaixeH(e.f)+silhH(e.f)+filhosH(e.f,null);}
+ else if(e.t==='p'){const p=e.p;b+=heroH(p)+filhosH(e.f,p.id);
   b+=`<div style="display:flex;gap:6px;align-items:center;margin:0 0 4px"><button class="chipbtn ${p.cheia?'red':''}" data-b="cheia" data-need="m">${p.cheia?'Cheia':'Com espaço'}</button></div>`;
   if(p.orgs.length){b+=`<div class="grp">Organizadores</div>`+p.orgs.map(o=>orgRowH(o)).join('');}
   b+=`<div class="grp">Itens<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button> · <button class="link" data-b="addo">+ Organizador</button></span></div>`;
@@ -119,12 +121,22 @@ export function rerenderRow(e){document.querySelectorAll(`.irow[data-item="${e.i
 export function refreshHero(){S.stack.forEach(s=>{if(s.t==='i')return;const h=s.el.querySelector('.sb>.hero');if(h){const n=document.createElement('div');n.innerHTML=heroH(nodeOf(s));h.replaceWith(n.firstElementChild);}});}
 export function rebuildAt(x){if(!x||x.sem)return;buildContents(byId(x.m.id),x.p.id);}
 
+/* --------- móveis dentro de móveis --------- */
+const ondeTxt=h=>!h?'':h.f.d.tipo==='lugar'?'Dentro de':classeMovel(h.f.d)==='mesa'&&false?'':h.pid&&h.f.parts[h.pid]&&(h.f.parts[h.pid].k==='top'||h.f.parts[h.pid].k==='above')?'Em cima de':'Embaixo de';
+export function encaixeH(f){let h='';const hs=f.host;const mv=f.d.movel;
+ if((hs&&!semTopo(f))||mv)h+=`<div class="encx">${hs&&!semTopo(f)?`<button class="chipbtn" data-b="vai" data-id="${hs.f.d.id}">${ondeTxt(hs)} <b>${hs.f.d.nome}</b></button>`:''}${mv?`<button class="chipbtn pri" data-b="mover" data-need="m">${IC.move||''}Mover</button>`:''}</div>`;
+ return h;}
+/* móveis encaixados neste móvel (ou nesta parte): clicar abre o card dele por cima deste */
+export function filhosH(f,pid){const fs=(f.filhos||[]).filter(x=>pid==null?true:x.pid===pid);if(!fs.length)return '';
+ return `<div class="grp">${pid==null?'Móveis encaixados':'Neste espaço'}</div><div class="filhos">${fs.map(x=>`<button class="filho" data-b="vai" data-push="1" data-id="${x.f.d.id}"><span class="fn">${x.f.d.nome}</span><span class="fw">${pid==null&&x.pid&&f.d.partes.find(p=>p.id===x.pid)?partName(f.d,f.d.partes.find(p=>p.id===x.pid)):''}</span>${IC.next}</button>`).join('')}</div>`;}
 /* --------- cliques nos cards --------- */
 export function handleCard(ev,e){const t=ev.target;const tag=t.closest('[data-tag]');if(tag)return tagPop(tag);
  const oc_=t.closest('[data-ocor]');if(oc_&&e.t==='o'){if(!can())return;e.o.cor=oc_.dataset.ocor;log(`${orgName(e.o)}: cor alterada`);buildContents(e.f,e.p.id);orgOpen(e.f,e.p.id,e.o.id,1);refreshCards();return;}
  const goto=t.closest('[data-goto]');if(goto){const p=e.f.d.partes.find(x=>x.id===goto.dataset.goto);replaceTop({t:'p',f:e.f,p});return;}
  const b=t.closest('[data-b]');if(b){const a=b.dataset.b;
   if(a==='close')return closeStack();if(a==='back')return popTo(S.stack.indexOf(e)-1);
+  if(a==='vai'){const g=byId(b.dataset.id);if(!g)return;if(b.dataset.push)pushCard({t:'m',f:g});else{setOpen(e.f,null);openStack([{t:'m',f:g}]);}return;}
+  if(a==='mover'){if(!can())return;return startMove(e.f);}
   if(a==='prev'||a==='next'){const list=F.filter(f=>f.d.lab===e.f.d.lab&&f.d.partes.length);let i=list.indexOf(e.f);i=(i+(a==='next'?1:-1)+list.length)%list.length;setOpen(e.f,null);openStack([{t:'m',f:list[i]}]);return;}
   if(a==='pprev'||a==='pnext'){const ps=visParts(e.f,false);let i=ps.indexOf(e.p);i=(i+(a==='pnext'?1:-1)+ps.length)%ps.length;replaceTop({t:'p',f:e.f,p:ps[i]});return;}
   if(a==='cheia'){e.p.cheia=!e.p.cheia;log(`${partName(e.f.d,e.p)} (${e.f.d.nome}) marcada como ${e.p.cheia?'cheia':'com espaço'}`);renderCard(e);return;}
@@ -523,17 +535,55 @@ document.querySelectorAll('#roles button').forEach(b=>b.onclick=()=>setRole(b.da
 $('#editBtn').onclick=()=>{closeStack(true);deselect();S.edit=true;applyStyle();home();toast('Clique num móvel e arraste. Os outros ficam em desenho técnico.',null,3500);};
 export function endEdit(){S.edit=false;S.sel=null;applyStyle();home();}
 $('#edDone').onclick=endEdit;
+/* ===== arrastar móveis (edição do Admin e "Mover" dos móveis de rodinha) ===== */
+const descendentes=f=>(f.filhos||[]).flatMap(x=>[x.f,...descendentes(x.f)]);
+export function iniciaArrasto(f,hit,py){return {f,py,ox:hit.x-f.g.position.x,oz:hit.z-f.g.position.z,moved:false,bb0:f.bb.clone(),p0:f.g.position.clone(),r0:f.g.rotation.y,antes:tocando(f,f.bb),kids:descendentes(f).map(k=>({f:k,p0:k.g.position.clone(),r0:k.g.rotation.y})),host:f.host};}
+/* posicionamento livre (sem grade): só não pode atravessar outro móvel, sair do lab nem ficar em cima de um desnível do piso */
+function pegada(f,x,z,rot){const b=bbLocal(f),c=Math.cos(rot),s_=Math.sin(rot);const t=.06;/* margem: móvel encostado na parede ou na borda do degrau conta como dentro */const pts=[[b.min.x+t,b.min.z+t],[b.max.x-t,b.min.z+t],[b.min.x+t,b.max.z-t],[b.max.x-t,b.max.z-t]].map(([a,e])=>[x+a*c+e*s_,z-a*s_+e*c]);
+ const bx=new THREE.Box3(new THREE.Vector3(Math.min(...pts.map(p=>p[0])),b.min.y,Math.min(...pts.map(p=>p[1]))),new THREE.Vector3(Math.max(...pts.map(p=>p[0])),b.max.y,Math.max(...pts.map(p=>p[1]))));return {pts,bx};}
+function cabe(f,x,z,rot,d,cl){const {pts,bx}=pegada(f,x,z,rot);
+ if(cl!=='topo'){const y0=fyW(x,z);for(const [px,pz] of pts){if(!inLab(f.d.lab,px,pz,0))return false;if(Math.abs(fyW(px,pz)-y0)>.02)return false;}}
+ if(cl==='topo')return true;const b=bx.clone();b.min.y+=f.g.position.y;b.max.y+=f.g.position.y;b.expandByScalar(-.03);const ig=d.antes,kids=new Set(d.kids.map(k=>k.f));
+ for(const g of F){if(g===f||!g.bb||g.d.lab!==f.d.lab||ig.has(g)||kids.has(g))continue;if(cl&&(ACEITA[g.d.tipo]||[]).includes(cl))continue;if(classeMovel(g.d)==='topo')continue;if(g.d.tipo==='lugar')continue;if(g.bb.intersectsBox(b))return false;}
+ return true;}
+export function arrasta(d,hit){const f=d.f,cl=classeMovel(f.d);let x=hit.x-d.ox,z=hit.z-d.oz,y=null,rot=f.g.rotation.y,host=null;
+ if(cl){const e=encaixe(f,x,z);if(!e)return;x=e.x;z=e.z;rot=e.rot;host=e.host;if(cl==='topo')y=e.y;}
+ if(!cabe(f,x,z,rot,d,cl))return;
+ f.g.position.set(x,y!=null?y:fyW(x,z),z);f.g.rotation.y=rot;d.host=host;
+ const dx=f.g.position.x-d.p0.x,dy=f.g.position.y-d.p0.y,dz=f.g.position.z-d.p0.z,dr=rot-d.r0;
+ for(const k of d.kids){const v=k.p0.clone().sub(d.p0);v.applyAxisAngle(new THREE.Vector3(0,1,0),dr);k.f.g.position.set(d.p0.x+dx+v.x,k.p0.y+dy,d.p0.z+dz+v.z);k.f.g.rotation.y=(k.r0??(k.r0=k.f.g.rotation.y))+dr;}
+ d.moved=true;wake(400);}
+export function soltaArrasto(d){const f=d.f;f.d.pos=[f.g.position.x,f.g.position.y,f.g.position.z];f.d.rot=f.g.rotation.y;measure(f);
+ for(const k of d.kids){k.f.d.pos=[k.f.g.position.x,k.f.g.position.y,k.f.g.position.z];k.f.d.rot=k.f.g.rotation.y;measure(k.f);}relaciona();
+ const h=f.host;log(h?`${f.d.nome}: agora ${ondeTxt(h).toLowerCase()} ${h.f.d.nome}`:`${f.d.nome}: posição alterada`);
+ if(S.mv)$('#mvTxt').innerHTML=mvTxt(f);refreshCards();}
+const mvTxt=f=>`Movendo <b>${f.d.nome}</b>${f.host?` · ${ondeTxt(f.host).toLowerCase()} ${f.host.f.d.nome}`:''}`;
+export function startMove(f){closeStack(true);focusLab(f.d.lab);S.mv=f;S.sel=f;app.dataset.mv='1';$('#mvTxt').innerHTML=mvTxt(f);home();
+ toast(classeMovel(f.d)==='topo'?'Arraste o gaveteiro: ele fica em cima dos tampos e encaixa no centro.':'Arraste o gaveteiro: perto de uma bancada ele encaixa embaixo do lado curto.',null,3200);wake(800);}
+export function endMove(){if(!S.mv)return;const f=S.mv;S.mv=null;S.sel=null;app.dataset.mv='0';home();openStack([{t:'m',f}]);}
+$('#mvDone').onclick=endMove;
+/* edição do Admin: leva o móvel (e o que está encaixado nele) para o outro laboratório, no lugar livre mais perto do centro de lá */
+$('#labBtn').onclick=()=>{const f=S.sel;if(!f)return toast('Selecione um móvel primeiro',null,1800);const de=f.d.lab,para=de==='man'?'ele':'man',L=LABS.find(l=>l.id===para);
+ const kids=descendentes(f).map(k=>({f:k,p0:k.g.position.clone(),r0:k.g.rotation.y}));const d={antes:new Set(),kids};const cl=classeMovel(f.d)==='topo'?null:classeMovel(f.d);
+ f.d.lab=para;const cand=[];for(const [x0,x1,z0,z1] of PLANTA_R[para])for(let x=x0+.2;x<=x1-.2;x+=.25)for(let z=z0+.2;z<=z1-.2;z+=.25)cand.push([x+OFF.x,z+OFF.z]);
+ cand.sort((a,b)=>Math.hypot(a[0]-L.c.x,a[1]-L.c.z)-Math.hypot(b[0]-L.c.x,b[1]-L.c.z));const ok=cand.find(([x,z])=>cabe(f,x,z,f.g.rotation.y,d,cl));f.d.lab=de;
+ if(!ok)return toast(`Não achei espaço livre para <b>${f.d.nome}</b> no outro laboratório`,null,2600);
+ const p0=f.g.position.clone(),p1=new THREE.Vector3(ok[0],fyW(ok[0],ok[1]),ok[1]);mudaLab(f,para);for(const k of kids)mudaLab(k.f,para);applyStyle();
+ tween({ms:650,ease:'spring',update:p=>{f.g.position.lerpVectors(p0,p1,p);for(const k of kids)k.f.g.position.copy(k.p0).add(f.g.position).sub(p0);},
+  done:()=>{f.d.pos=[p1.x,p1.y,p1.z];measure(f);for(const k of kids){k.f.d.pos=[k.f.g.position.x,k.f.g.position.y,k.f.g.position.z];measure(k.f);}relaciona();refreshBadges();log(`${f.d.nome}: levado para o ${L.nome}`);}});};
+$('#mvRot').onclick=()=>{const f=S.mv;if(!f||classeMovel(f.d)==='topo'&&false)return;const r0=f.g.rotation.y;tween({ms:380,ease:'spring',update:p=>f.g.rotation.y=r0+p*Math.PI/2,done:()=>{f.d.rot=f.g.rotation.y;measure(f);relaciona();log(`${f.d.nome}: girado 90°`);}});};
+addEventListener('keydown',ev=>{if(ev.key==='Escape'&&S.mv)endMove();});
 /* móveis não se atravessam: vale a caixa de cada um; o que já se tocava antes de mexer (armário suspenso sobre bancada) continua podendo */
 export function tocando(f,bb){const r=new Set();const b=bb.clone().expandByScalar(-.03);for(const g of F)if(g!==f&&g.bb&&g.d.lab===f.d.lab&&g.bb.intersectsBox(b))r.add(g);return r;}
 export function colide(f,bb0,dx,dz,antes){const b=bb0.clone().translate(new THREE.Vector3(dx,0,dz));for(const g of tocando(f,b))if(!antes.has(g))return g;return null;}
 $('#origBtn').onclick=()=>{const f=S.sel;if(!f)return toast('Selecione um móvel primeiro',null,1800);const d=f.d;if(!d.pos0)return;
  const p0=f.g.position.clone(),r0=f.g.rotation.y,p1=new THREE.Vector3(...d.pos0),r1=d.rot0||0;if(p0.distanceTo(p1)<.01&&Math.abs(r0-r1)<.01)return toast(`<b>${d.nome}</b> já está na posição original`,null,1800);
- tween({ms:520,ease:'spring',update:p=>{f.g.position.lerpVectors(p0,p1,p);f.g.rotation.y=r0+(r1-r0)*p;},done:()=>{d.pos=[...d.pos0];d.rot=r1;measure(f);log(`${d.nome}: voltou à posição original`);}});};
+ tween({ms:520,ease:'spring',update:p=>{f.g.position.lerpVectors(p0,p1,p);f.g.rotation.y=r0+(r1-r0)*p;},done:()=>{d.pos=[...d.pos0];d.rot=r1;measure(f);relaciona();log(`${d.nome}: voltou à posição original`);}});};
 $('#rotBtn').onclick=()=>{const f=S.sel;if(!f)return toast('Selecione um móvel primeiro',null,1800);const r0=f.g.rotation.y;const antes=tocando(f,f.bb);
  f.g.rotation.y=r0+Math.PI/2;f.g.updateMatrixWorld(true);const bb=new THREE.Box3();f.g.traverse(o=>{if(o.isMesh&&o.userData.base)bb.expandByObject(o);});f.g.rotation.y=r0;f.g.updateMatrixWorld(true);
  const g=[...tocando(f,bb)].find(x=>!antes.has(x));if(g)return toast(`Girando, <b>${f.d.nome}</b> bateria em <b>${g.d.nome}</b>. Afaste antes.`,null,2400);
  tween({ms:420,ease:'spring',update:p=>f.g.rotation.y=r0+p*Math.PI/2,done:()=>{f.d.rot=f.g.rotation.y;measure(f);log(`${f.d.nome}: girado 90°`);}});};
-export function home(){$('#home').classList.toggle('hide',!!(S.stack.length||S.carry||S.vist||S.edit||S.oc||S.loc));}
+export function home(){$('#home').classList.toggle('hide',!!(S.stack.length||S.carry||S.vist||S.edit||S.mv||S.oc||S.loc));}
 $('#gBtn').onclick=ev=>openPalette('guardar',{},ev.currentTarget);
 $('#searchBtn').onclick=ev=>openPalette('buscar',{},ev.currentTarget);
 addEventListener('keydown',ev=>{if(ev.target.matches('input,textarea')&&ev.key!=='Escape')return;
@@ -560,13 +610,13 @@ export function pickPart(){ray.setFromCamera(ndc,camera);const hs=ray.intersectO
 export function pickLab(){ray.setFromCamera(ndc,camera);const fl=[];for(const L of LABS)labG[L.id].traverse(o=>{if(o.userData.labFloor)fl.push(o);});const h=ray.intersectObjects(fl,false)[0];return h?h.object.userData.labFloor:null;}
 export function pickOrg(f,pid){ray.setFromCamera(ndc,camera);const ms=[];f.parts[pid].content.traverse(o=>{if(o.isMesh&&o.userData.org)ms.push(o);});const h=ray.intersectObjects(ms,false)[0];return h?f.d.partes.find(p=>p.id===pid).orgs.find(o=>o.id===h.object.userData.org):null;}
 cvs.addEventListener('pointermove',ev=>{setNdc(ev);needPick=true;
- if(drag){ray.setFromCamera(ndc,camera);const hit=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),hit)){const sn=v=>Math.round(v*4)/4;const L=byLab(drag.f.d.lab);
-  const nx=sn(hit.x-drag.ox),nz=sn(hit.z-drag.oz);if(inLab(drag.f.d.lab,nx,nz)&&!colide(drag.f,drag.bb0,nx-drag.p0.x,nz-drag.p0.z,drag.antes)){drag.f.g.position.set(nx,fyW(nx,nz),nz);drag.moved=true;}}}});
+ if(drag){ray.setFromCamera(ndc,camera);const hit=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-drag.py),hit))arrasta(drag,hit);}});
 cvs.addEventListener('pointerleave',()=>{ptr.in=false;setHover(null);tip.classList.remove('on');});
 cvs.addEventListener('pointerdown',ev=>{down={x:ev.clientX,y:ev.clientY};setNdc(ev);
- if(S.edit){const f=pickF();if(f){S.sel=f;applyStyle();ray.setFromCamera(ndc,camera);const hit=new THREE.Vector3();ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),hit);
-  drag={f,ox:hit.x-f.g.position.x,oz:hit.z-f.g.position.z,moved:false,bb0:f.bb.clone(),p0:f.g.position.clone(),antes:tocando(f,f.bb)};controls.enabled=false;cvs.setPointerCapture(ev.pointerId);}}});
-cvs.addEventListener('pointerup',ev=>{if(drag){const d=drag;drag=null;controls.enabled=true;if(d.moved){d.f.d.pos=[d.f.g.position.x,d.f.g.position.y,d.f.g.position.z];measure(d.f);log(`${d.f.d.nome}: posição alterada`);}down=null;return;}
+ if(S.mv){const f=S.mv,py=f.g.position.y;ray.setFromCamera(ndc,camera);const hit=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-py),hit)&&Math.hypot(hit.x-f.center.x,hit.z-f.center.z)<.75){drag=iniciaArrasto(f,hit,py);controls.enabled=false;cvs.setPointerCapture(ev.pointerId);}return;}
+ if(S.edit){const f=pickF();if(f){S.sel=f;applyStyle();ray.setFromCamera(ndc,camera);const py=f.g.position.y;const hit=new THREE.Vector3();ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-py),hit);
+  drag=iniciaArrasto(f,hit,py);controls.enabled=false;cvs.setPointerCapture(ev.pointerId);}}});
+cvs.addEventListener('pointerup',ev=>{if(drag){const d=drag;drag=null;controls.enabled=true;if(d.moved)soltaArrasto(d);down=null;return;}if(S.mv){down=null;return;}
  if(!down)return;const mv=Math.hypot(ev.clientX-down.x,ev.clientY-down.y);down=null;if(mv>6||ev.button!==0)return;setNdc(ev);click();});
 cvs.addEventListener('dblclick',()=>{if(S.carry||S.edit||S.vist||S.oc)return;const f=pickF();if(f)openStack([{t:'m',f}]);});
 export function setHover(f){if(S.hover===f)return;const p=S.hover;S.hover=f;if(p)tween({ms:130,key:p.d.id+'h',update:t=>p.v.hover=1-t});if(f)tween({ms:130,key:f.d.id+'h',update:t=>f.v.hover=t});}
@@ -616,7 +666,19 @@ export function labTags(){const on=viewMode()==='over'&&!S.edit;for(const {L,el}
 /* ================= laço ================= */
 export let last=performance.now(),pickT=0;export const blue=new THREE.Color(0x2f8cff);
 export function focusedKey(){const top=S.stack[S.stack.length-1];if(top&&(top.t==='p'||top.t==='o'||top.t==='i'))return top.f.d.id+'/'+top.p?.id;if(S.carry&&S.carry.stage==='confirm')return S.carry.target.f.d.id+'/'+S.carry.target.p.id;return null;}
+let ultVM='',ultTw=0;
+/* celular (sem pós-processamento): o outro lab vira segundo plano de verdade. Desenha ele primeiro (já desbotado),
+   limpa a profundidade e desenha o lab escolhido por cima: nenhum móvel de lá fica na frente dos daqui. Custo ~igual a um passe só. */
+function renderDuplo(){const other=WL.lab==='man'?'ele':'man';const keep=new Set([labG[other],...F.filter(f=>f.d.lab===other).map(f=>f.g)]);
+ const hid=[];for(const c of scene.children){if(c.isLight||keep.has(c)||!c.visible)continue;c.visible=false;hid.push(c);}
+ const au=renderer.shadowMap.autoUpdate;renderer.shadowMap.autoUpdate=false;renderer.render(scene,camera);renderer.shadowMap.autoUpdate=au;hid.forEach(c=>c.visible=true);
+ const hid2=[];for(const c of keep)if(c.visible){c.visible=false;hid2.push(c);}
+ const ac=renderer.autoClear,bg=scene.background;renderer.autoClear=false;scene.background=null;renderer.clearDepth();renderer.render(scene,camera);
+ renderer.autoClear=ac;scene.background=bg;hid2.forEach(c=>c.visible=true);}
 export function loop(now){const dt=Math.min(100,now-last);last=now;runTweens(now);
+ if(FADE===1){/* celular: o outro lab desbota e volta aos poucos (~0,4 s) */const alvo=S.lab&&!S.edit?1:0;if(S.lab&&S.lab!==WL.lab){if(WL.lab&&WL.k>.01){WL.k=0;}WL.lab=S.lab;}
+  if(Math.abs(alvo-WL.k)>.002){WL.k+=(alvo-WL.k)*Math.min(1,dt*.009);if(Math.abs(alvo-WL.k)<.02)WL.k=alvo;applyStyle();wake(200);}}
+ {const vm=viewMode();if(vm!==ultVM){ultVM=vm;wake(1500);occAgora();}if(ultTw&&!tweens.size){wake(900);occAgora();}ultTw=tweens.size;}/* câmera acabou de parar: mais alguns quadros para as paredes decidirem *//* mudou a visão (geral/lab/zoom): paredes precisam de alguns quadros para cair ou subir */
  if(parado(now)&&!tweens.size){requestAnimationFrame(loop);return;}
  if(needPick&&ptr.in&&!down&&!drag&&now-pickT>40){needPick=false;pickT=now;hoverTick();}
  controls.enableRotate=!S.oc;controls.enablePan=viewMode()==='lab';
@@ -649,6 +711,7 @@ export function loop(now){const dt=Math.min(100,now-last);last=now;runTweens(now
   post.outline.selectedObjects=sel;
   const focused=S.stack.length>0||!!S.vist||!!S.oc||(S.carry&&S.carry.stage==='confirm');S.focusAmt+=((focused?1:0)-S.focusAmt)*.08;
   post.bokeh.enabled=S.focusAmt>.02&&!S.edit;post.bokeh.uniforms.focus.value=S.oc?1.5:focoProf();post.bokeh.uniforms.aperture.value=(S.oc?.012:.004)*S.focusAmt;post.bokeh.uniforms.maxblur.value=.009;post.c.render();}
+ else if(FADE===1&&WL.lab&&WL.k>.01&&!S.edit)renderDuplo();
  else renderer.render(scene,camera);
  ghostPost(gh);
  placeOverlays();labTags();requestAnimationFrame(loop);}
@@ -661,11 +724,14 @@ export function focoProf(){const top=S.stack[S.stack.length-1];let f=null,pid=nu
  fv.applyMatrix4(camera.matrixWorldInverse);return Math.max(.5,-fv.z);}
 export function want_y(){return (S.stack.length||S.oc)&&mob()?(S.stack.length?(S.sheetH||app.clientHeight*.56)/2:app.clientHeight*.24):0;}
 /* parado: só conta o tempo e espera; o alerta pulsante do móvel aberto continua no modo completo */
-export function parado(now){return now>RENDER.ate&&!(S.stack.length&&!LITE)&&!S.vist;}
+/* transições em curso (desfoque do outro lab, desbotado do celular) não deixam a cena dormir, por mais lento que seja o quadro */
+export function parado(now){return now>RENDER.ate&&!(S.stack.length&&!LITE)&&!S.vist&&!GH.anda&&!(FADE===1&&Math.abs((S.lab&&!S.edit?1:0)-WL.k)>.002);}
 wake(4000);requestAnimationFrame(loop);
 
 setRole('mem');
-if(location.hash.includes('dbg')){window.__S=S;window.__post=()=>post;window.__scene=scene;window.__cam=camera;window.__ray=ray;window.__F=F;window.__dbg={openStack,byId,pushCard,startCarry,locE,openPalette,localizar,startVist,select,applyStyle,openOrgCreator,openItemCreator,chooseTarget,commitCarry,focusLab,setHoverPart,walk,openCompras,setRole};}
+/* prévias (artefato): VITE_LAB=ele abre direto num lab */
+if(import.meta.env&&import.meta.env.VITE_LAB)setTimeout(()=>focusLab(import.meta.env.VITE_LAB),900);
+if(location.hash.includes('dbg')){window.__S=S;window.__post=()=>post;window.__scene=scene;window.__cam=camera;window.__ray=ray;window.__F=F;window.__OCC=OCC;window.__dbg={RENDER,wake,inLab,fyW,encaixe,cabe,bbLocal,iniciaArrasto,arrasta,soltaArrasto,startMove,endMove,camTo,openStack,byId,pushCard,startCarry,locE,openPalette,localizar,startVist,select,applyStyle,openOrgCreator,openItemCreator,chooseTarget,commitCarry,focusLab,setHoverPart,walk,openCompras,setRole};}
 
 
 /* o foco num campo perto da borda não pode rolar a tela inteira */

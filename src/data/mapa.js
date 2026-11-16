@@ -1,8 +1,10 @@
 /* Ligação entre o modelo 3D (id do móvel no app) e a planilha. Usado pelo seed da planilha nova. */
+/* nome do laboratório na planilha */
+export const LAB_NOME = { man: 'Manufatura', ele: 'Eletrônica' };
 export const MOVEL_ID = {
   central: 'MAN-001', pc: 'MAN-002', serra: 'MAN-003', s06: 'MAN-004', b06: 'MAN-005', s07: 'MAN-006', b07: 'MAN-007',
   e10: 'MAN-009', colas: 'MAN-010', s09: 'MAN-011', gazul: 'MAN-012', a9: 'MAN-013', flag: 'MAN-014', materiais: 'MAN-015',
-  carrinho: 'MAN-017', vao: 'MAN-018', lixo: 'MAN-019', bel: 'ELE-001', est2: 'ELE-002',
+  carrinho: 'MAN-017', vao: 'MAN-018', lixo: 'MAN-019', e_imp: 'ELE-001', e_solda: 'ELE-002', e_gv1: 'ELE-003', e_gv2: 'ELE-004', e_quadro: 'ELE-005', e_ar: 'ELE-006', e_mesa: 'ELE-007', e_chave: 'ELE-008', e_est: 'ELE-009', e_gv3: 'ELE-010', e_gv4: 'ELE-011', e_azul: 'ELE-012', e_fundo: 'ELE-013',
 };
 /* endereço equivalente na Central v2 (aba DESTINOS) */
 export const DESTINO_V2 = {

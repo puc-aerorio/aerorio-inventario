@@ -500,3 +500,19 @@ html,body{overscroll-behavior:none}
 .acctpop .tl{font:600 .72rem var(--cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding:8px 10px 2px}
 .acctpop .ilist{display:flex;flex-direction:column}
 @media (max-width:820px){ .admwrap{display:none!important} .acctpop{max-height:calc(100% - 80px);overflow:auto} }
+/* mesas em L: tampo principal e retorno lado a lado; gaveteiro com chave: azul pequeno em cima */
+.tbl .tt{display:flex;gap:6px}.tbl .tt>*{flex:1;min-width:0}
+.gvb.mini.az{flex:none;margin:0 18% 6px;background:color-mix(in srgb,#1f4c96 14%,transparent)}
+/* mover móvel de rodinha (qualquer membro) */
+#app[data-mv="1"] .mvbar{display:flex}
+.mvbar span b{font-weight:700}
+/* móveis dentro de móveis */
+.encx{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
+.encx .chipbtn{display:inline-flex;align-items:center;gap:6px}
+.encx .chipbtn .i{width:15px;height:15px}
+.chipbtn.pri{background:var(--ink);color:var(--bg,#fff);border-color:transparent}
+.filhos{display:flex;flex-direction:column;gap:4px;margin:0 0 8px}
+.filho{display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--chip);background:var(--card2,transparent);border-radius:12px;padding:9px 10px;font:600 .88rem var(--sans);color:var(--ink);cursor:pointer;text-align:left;transition:background .15s}
+.filho:hover{background:var(--chip)}.filho .fn{flex:1}.filho .fw{font-weight:500;color:var(--ink3);font-size:.8rem}.filho .i{width:15px;height:15px;color:var(--ink3)}
+.hostTop{display:flex;align-items:center;gap:6px;width:100%;border:1px dashed color-mix(in srgb,var(--ink3) 60%,transparent);background:none;border-radius:10px;padding:7px 10px;margin-bottom:6px;font:500 .82rem var(--sans);color:var(--ink2);cursor:pointer;text-align:left}
+.hostTop b{font-weight:700;color:var(--ink)}

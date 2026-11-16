@@ -11,7 +11,7 @@ export const TABS = {
   MOVEIS: {
     k: 'id', cor: '#0B1B2E',
     c: ['id', 'numero', 'nome', 'laboratorio', 'modelo', 'x', 'y', 'z', 'rotacao', 'etiqueta', 'estado', 'observacoes', 'id_antigo', 'atualizado_em', 'atualizado_por'],
-    app: ['x', 'y', 'z', 'rotacao', 'etiqueta'],
+    app: ['x', 'y', 'z', 'rotacao', 'etiqueta', 'laboratorio'],
     num: ['x', 'y', 'z', 'rotacao'],
     d: {
       id: 'Código fixo do móvel. Não mude.',
@@ -153,6 +153,8 @@ export const PERM = {
 /* valores que só o Admin grava */
 export const ADMIN_VAL = { ITENS: { estado: ['Removido'] } };
 /* o que vale como "fora de uso" em cada aba */
+/* móveis de rodinha: qualquer Membro pode reposicioná-los (x, y, z, rotação) */
+export const MOVEL_MEMBRO = ['ELE-003', 'ELE-004', 'ELE-010', 'ELE-011', 'ELE-012'];
 export const OFF = { MOVEIS: ['Inativo'], ORGANIZADORES: ['Removido'], ITENS: ['Removido'], ESTOQUE: ['Removido'], UNIDADES: ['Baixada'], COMPRAS: ['Removida', 'Comprado'], ETIQUETAS: ['Inativa'] };
 export const OFFCOL = { MOVEIS: 'estado', ORGANIZADORES: 'estado', ITENS: 'estado', ESTOQUE: 'estado', UNIDADES: 'situacao', COMPRAS: 'status', ETIQUETAS: 'estado' };
 export const OFFVAL = { ORGANIZADORES: 'Removido', ITENS: 'Removido', ESTOQUE: 'Removido', UNIDADES: 'Baixada', COMPRAS: 'Removida', ETIQUETAS: 'Inativa' };

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { F, FADE, S, ray } from './state.js';
+import { F, FADE, S, ray, wake } from './state.js';
 import { RECADO } from './data.js';
 import { box, camera, controls, labG, lamps, mesh, scene } from './scene.js';
 
@@ -56,7 +56,7 @@ export function construirSalas(){
  const ele=new THREE.Group();ele.position.copy(OFF);labG.ele.add(ele);
  const sharedG=new THREE.Group();sharedG.position.copy(OFF);scene.add(sharedG); // paredes entre os dois labs: não apagam com a Manufatura
  /* pisos: nível da porta, fundo rebaixado em L, calços (mesa central, PC, lixo) */
- for(const [x0,x1,z0,z1] of[[0,.35,0,1.75],[0,1.0,1.75,7],[1.0,5.2,3.5,7],[5.2,7.2,0,4.15]])laje(man,x0,x1,z0,z1,0,'man');
+ for(const [x0,x1,z0,z1] of[[0,.35,0,1.75],[0,1.0,1.75,7],[1.0,5.2,3.5,7],[5.2,7.4,0,2.1],[5.2,7.2,2.1,4.15]])laje(man,x0,x1,z0,z1,0,'man');
  for(const r of FUNDO)laje(man,r[0],r[1],r[2],r[3],-DG,'man');
  for(const c of CALCOS){const r=c.r;laje(man,r[0],r[1],r[2],r[3],c.top,'man',c.top+DG+.02);}
  // rampa da esquerda: retângulo até o calço da mesa; da direita: borda diagonal até a ponta do degrau (coluna)
@@ -81,10 +81,17 @@ export function construirSalas(){
  {const o=occ(sharedG,'wall',{n:[1,0],shared:1});const g=o.g;X(g,5.2,5.32,0,LH,4.15,7.0,'#efebe5','wall');const t=textTex(['',...RECADO.linhas],600,320,{bg:'#fbfbfa',fg:'#1f4c96',fs:34,w:500});
   X(g,5.13,5.2,.95,2.12,4.45,6.75,'#b9bec1','color',{m:.5});ROOM.quadro=texPlane(g,2.24,1.13,t,5.128,1.535,5.6,-Math.PI/2);X(g,5.07,5.2,.92,.95,4.6,6.6,'#b9bec1','color',{m:.5});}
  {const o=occ(sharedG,'wall',{n:[0,1],shared:1});X(o.g,5.2,7.32,0,LH,4.15,4.27,'#efebe5','wall');}
- {const o=occ(sharedG,'wall',{n:[1,0],shared:1});X(o.g,7.2,7.32,0,LF,0,4.27,'#efebe5','wall');}
+/* canaleta de tomadas (faixa branca com espelhos de tomada) — ao longo das paredes, como nas fotos */
+ const canaleta=(g,ax,a0,a1,c,face)=>{// ax:'x' corre em x (parede sul/norte) ou 'z' (parede leste/oeste); c = coordenada da face; face = sentido para dentro
+  const y0=1.04,y1=1.18,e=.05;if(ax==='x')X(g,a0,a1,y0,y1,c,c+face*e,'#f4f4f2','clay');else X(g,c,c+face*e,y0,y1,a0,a1,'#f4f4f2','clay');
+  for(let a=a0+.5;a<a1-.3;a+=1.45){const w=.34;if(ax==='x'){X(g,a,a+w,y0+.012,y1-.012,c+face*e,c+face*(e+.006),'#e6e7e3','clay');for(let k=0;k<5;k++)X(g,a+.04+k*.06,a+.07+k*.06,y0+.05,y0+.09,c+face*(e+.006),c+face*(e+.01),k<2?'#b8322b':'#1d2024','color');}
+   else{X(g,c+face*e,c+face*(e+.006),y0+.012,y1-.012,a,a+w,'#e6e7e3','clay');for(let k=0;k<5;k++)X(g,c+face*(e+.006),c+face*(e+.01),y0+.05,y0+.09,a+.04+k*.06,a+.07+k*.06,k<2?'#b8322b':'#1d2024','color');}}};
+ /* divisa Manufatura | Eletrônica na parte das janelas: recorte no meio (a metade da janela avança ~20 cm para dentro da Eletrônica) */
+ {const o=occ(sharedG,'wall',{n:[1,0],shared:1});const g=o.g;X(g,7.4,7.52,0,LF,0,2.1,'#efebe5','wall');X(g,7.2,7.52,0,LF,2.1,2.22,'#efebe5','wall');X(g,7.2,7.32,0,LF,2.22,4.27,'#efebe5','wall');
+  canaleta(g,'z',.15,2.0,7.52,1);canaleta(g,'z',2.3,4.2,7.32,1);}
  /* fachada contínua: sai quando a câmera olha de fora */
- const oFach=occ(man,'wall',{n:[0,-1]});{const o=oFach;const g=new THREE.Group();g.position.z=-.02;o.g.add(g);fachada(g,.35,4.85,-DG,LF,4);fachada(g,5.2,7.2,0,LF,2);}
- {const o=occ(ele,'wall',{n:[0,-1],lab:'ele'});const g=new THREE.Group();g.position.z=-.02;o.g.add(g);fachada(g,7.2,10,0,LF,3);}
+ const oFach=occ(man,'wall',{n:[0,-1]});{const o=oFach;const g=new THREE.Group();g.position.z=-.02;o.g.add(g);fachada(g,.35,4.85,-DG,LF,4);fachada(g,5.2,7.4,0,LF,2);}
+ {const o=occ(ele,'wall',{n:[0,-1],lab:'ele'});const g=new THREE.Group();g.position.z=-.02;o.g.add(g);fachada(g,7.4,10,0,LF,3);}
  /* estrutura que não sai: parede curva da direita (divide o fundo do recuo) e a faixa inclinada; translúcidas no zoom quando atrapalham */
  {const o=occ(man,'keep');const es=o.g;
   const m1=mesh(es,ext(arco(1.5,3.7),4.85,5.2),'#efebe5','wall');
@@ -94,7 +101,7 @@ export function construirSalas(){
  /* luminárias: translúcidas de dia, acesas no noturno */
  {const o=occ(man,'fade',{fadeOp:.2});for(const [x,z] of[[2.0,2.5],[3.85,2.5],[2.0,4.4],[3.85,4.4],[2.0,6.1],[3.85,6.1],[6.3,1.4],[6.3,3.5]]){const l=new THREE.Group();l.position.set(x,(x>5.2?LF:tetoM(z))-.02,z);o.g.add(l);
   trans(X(l,-.64,.64,-.03,0,-.07,.07,'#d9dcdd','clay'),.2,{opA:.55});for(const zz of[-.035,.035]){const t=mesh(l,new THREE.CylinderGeometry(.014,.014,1.2,10),'#ffffff','bulb',0,-.045,zz,{cast:false});t.rotation.z=Math.PI/2;trans(t,.25,{opA:.9});}
-  const pl=new THREE.PointLight(0xfff8f0,0,9,1.3);pl.position.set(OFF.x+x,l.position.y-.25,OFF.z+z);scene.add(pl);lamps.push({pl,g:new THREE.Group(),I:2.4});}}
+  const pl=new THREE.PointLight(0xfff8f0,0,9,1.3);pl.position.set(OFF.x+x,l.position.y-.25,OFF.z+z);scene.add(pl);lamps.push({pl,g:l,I:2.4,lab:'man'});}}
  /* projetor (translúcido, braço mais baixo) */
  {const o=occ(man,'fade',{fadeOp:.45});const g=o.g,x=2.925,z=3.95;mesh(g,new THREE.CylinderGeometry(.02,.02,LH-2.3,10),'#c9cdd0','clay',x,(LH+2.3)/2,z,{m:.6});X(g,x-.04,x+.04,2.32,2.4,z-.03,z+.03,'#e9ebea','clay');
   X(g,x-.16,x+.16,2.18,2.3,z-.14,z+.14,'#f5f5f3','clay');const l=mesh(g,new THREE.CylinderGeometry(.035,.035,.02,16),'#1d2a3a','color',x+.07,2.24,z+.14);l.rotation.x=Math.PI/2;}
@@ -107,11 +114,35 @@ export function construirSalas(){
  {const o=occ(man,'up',{top:LH,link:oEsq});const g=new THREE.Group();g.position.set(.42,1.95-LH,4.3);g.rotation.y=Math.PI/2;o.g.add(g);const geo=new THREE.BoxGeometry(1,.36,1);const p=geo.attributes.position;for(let i=0;i<p.count;i++){const top=p.getY(i)>0;p.setX(i,p.getX(i)*(top?.95:1.25));p.setZ(i,p.getZ(i)*(top?.42:.62));}geo.computeVertexNormals();
   mesh(g,geo,'#1b1e21','color',0,.18,0,{r:.5,m:.3});X(g,-.45,.45,.36,.62,-.2,-.05,'#1b1e21','color',{m:.3});mesh(o.g,new THREE.CylinderGeometry(.012,.012,1.9,8),'#d8b21f','color',.07,1.95-LH,5.0);}
  /* Lab Drone (Eletrônica): piso em L e paredes na mesma altura da parede do quadro */
- for(const [x0,x1,z0,z1] of[[7.32,10,0,4.27],[5.32,10,4.27,7]])laje(ele,x0,x1,z0,z1,0,'ele');
- {const o=occ(ele,'wall',{n:[1,0],lab:'ele'});X(o.g,10,10.12,0,LH,0,7.06,'#efebe5','wall');}
- {const o=occ(ele,'wall',{n:[0,1],lab:'ele'});X(o.g,5.32,10.12,0,LH,6.94,7.06,'#efebe5','wall');}
+ for(const [x0,x1,z0,z1] of[[7.52,10,0,2.22],[7.32,10,2.22,4.27],[5.32,10,4.27,7]])laje(ele,x0,x1,z0,z1,0,'ele');
+ /* parede leste: fundo da escada (cunha inclinada fechada — nada de teto solto), pilar, quadro branco e canaleta */
+ const eLeste=occ(ele,'wall',{n:[1,0],lab:'ele'});
+ {const o=eLeste;const g=o.g;X(g,10,10.12,0,LH,0,7.06,'#efebe5','wall');
+  X(g,9.86,10,0,LH,4.6,4.8,'#efebe5','wall');
+  X(g,9.975,10,.92,2.02,4.95,6.2,'#b9bec1','color',{m:.5});texPlane(g,1.21,1.06,canvasTex(400,350,(x)=>{x.fillStyle='#fbfbfa';x.fillRect(0,0,400,350);x.strokeStyle='#5b6f93';x.lineWidth=3;
+   x.strokeRect(70,60,90,40);x.beginPath();x.moveTo(160,80);x.lineTo(260,80);x.stroke();x.strokeRect(260,55,70,50);x.beginPath();x.arc(120,210,38,0,7);x.stroke();x.beginPath();x.moveTo(190,190);x.lineTo(320,250);x.lineTo(200,280);x.closePath();x.stroke();}),9.972,1.47,5.575,-Math.PI/2);
+  canaleta(g,'z',1.3,4.55,10,-1);/* começa onde a parede curva deixa de cobrir a altura da régua */canaleta(g,'z',6.3,6.9,10,-1);}
+ /* parede curva da Eletrônica: igual à da Manufatura (presa à fachada, borda curva do chão ao teto), com metade da espessura */
+ {const o=eLeste;const a=new THREE.Shape(),z0=.75,z1=3.0;/* faz parte da parede leste: recolhe junto com ela */a.moveTo(z0,0);for(let i=1;i<=22;i++){const t=i/22;a.lineTo(z0+t*(z1-z0),LH*Math.pow(t,.55));}a.lineTo(0,LH);a.lineTo(0,0);a.closePath();
+  mesh(o.g,ext(a,9.825,10),'#efebe5','wall');}
+ /* parede sul: porta (com folga), ar-condicionado, quadros de luz e canaleta */
+ {const o=occ(ele,'wall',{n:[0,1],lab:'ele'});const g=o.g,d0=5.62,d1=6.47;
+  X(g,5.32,d0,0,LH,6.94,7.06,'#efebe5','wall');X(g,d1,10.12,0,LH,6.94,7.06,'#efebe5','wall');X(g,d0,d1,2.12,LH,6.94,7.06,'#efebe5','wall');
+  for(const x of[d0,d1-.05])X(g,x,x+.05,0,2.12,6.92,7.08,'#e4e4e0','clay');X(g,d0,d1,2.08,2.13,6.92,7.08,'#e4e4e0','clay');
+  /* porta fechada, rente à parede (como a da Manufatura): quando a parede recolhe, ela vai junto sem virar uma tábua solta no chão */
+  X(g,d0+.05,d1-.05,0,2.08,6.97,7.0,'#f6f6f4','clay',{r:.5});texPlane(g,.34,.16,textTex(['AeroRio'],340,160,{bg:'#eef0f2',fg:'#2b3c66',fs:64}),(d0+d1)/2,1.62,6.968,Math.PI);
+  mesh(g,new THREE.CylinderGeometry(.009,.009,.12,8),'#c3c8cb','clay',d1-.16,1.02,6.94,{m:.7}).rotation.z=Math.PI/2;
+  {const x=9.35,y0=2.05,y1=2.33,z0=6.94,z1=6.7;X(g,x-.48,x+.48,y0,y1,z1,z0,'#f7f7f5','clay',{r:.35});X(g,x-.44,x+.44,y0-.003,y0+.02,z1+.01,z1+.06,'#c9cdcf','clay');X(g,x+.35,x+.37,y0+.22,y0+.24,z1-.004,z1,'#3ad16b','paint');}
+  X(g,7.45,8.05,1.45,2.25,6.94,6.8,'#d9d8c8','clay',{r:.5});X(g,7.74,7.77,1.82,1.9,6.8,6.79,'#2b2f33','color');X(g,8.2,8.6,1.85,2.32,6.94,6.82,'#d9d8c8','clay',{r:.5});
+  mesh(g,new THREE.CylinderGeometry(.03,.03,1.2,10),'#eceae4','clay',8.12,1.85,6.9,{});
+  canaleta(g,'x',7.0,9.95,6.94,-1);}
+ /* parede oeste da parte estreita (a divisa com a Manufatura): canaleta do lado da Eletrônica */
+ /* luminárias da Eletrônica */
+ {const o=occ(ele,'fade',{fadeOp:.2,lab:'ele'});for(const [x,z] of[[8.6,1.2],[8.6,3.2],[7.0,5.6],[9.0,5.6]]){const l=new THREE.Group();l.position.set(x,(z<4.27?LF:LH)-.02,z);o.g.add(l);
+  trans(X(l,-.64,.64,-.03,0,-.07,.07,'#d9dcdd','clay'),.2,{opA:.55});for(const zz of[-.035,.035]){const t=mesh(l,new THREE.CylinderGeometry(.014,.014,1.2,10),'#ffffff','bulb',0,-.045,zz,{cast:false});t.rotation.z=Math.PI/2;trans(t,.25,{opA:.9});}
+  const pl=new THREE.PointLight(0xfff8f0,0,9,1.3);pl.position.set(OFF.x+x,l.position.y-.25,OFF.z+z);scene.add(pl);lamps.push({pl,g:l,I:2.4,lab:'ele'});}}
  scene.updateMatrixWorld(true);
- for(const o of OCC){o.box=new THREE.Box3().setFromObject(o.g);o.g.traverse(m=>{if(m.isMesh){o.meshes.push(m);if(o.shared){m.userData.shared=true;m.userData.lab='man';}if(o.mode==='fade'||o.mode==='keep'){m.material.transparent=true;}}});}
+ for(const o of OCC){o.box=new THREE.Box3().setFromObject(o.g);o.lajes=[];if(o.mode==='wall')o.g.traverse(m=>{if(m.isMesh&&m.userData.role==='wall'){const b=new THREE.Box3().setFromObject(m);if(b.max.y-b.min.y>1.2)o.lajes.push(b);}});if(!o.lajes.length)o.lajes=[o.box];o.g.traverse(m=>{if(m.isMesh){o.meshes.push(m);if(o.shared){m.userData.shared=true;m.userData.lab='man';}if(o.mode==='fade'||o.mode==='keep'){m.material.transparent=true;}}});}
 }
 construirSalas();
 
@@ -122,7 +153,7 @@ export function alvosVista(mode){const t=[];if(mode==='zoom'){const fc=S.focusT|
  else if(mode==='lab'){for(const f of F)if(f.d.lab===S.lab&&f.bb){const b=f.bb;t.push(f.center.clone(),f.anchor.clone());for(const x of[b.min.x,b.max.x])for(const z of[b.min.z,b.max.z])t.push(new THREE.Vector3(x,(b.min.y+b.max.y)/2,z));}}return t;}
 /* dentro de um lab, a parede também cai se tapa o chão ou os móveis dele (pontos refeitos a cada ~2 s, porque móveis mudam de lugar) */
 let labAlvos=null,labAlvosK='',labAlvosN=0;
-export function alvosLab(){const k=S.lab;if(labAlvos&&labAlvosK===k&&++labAlvosN<30)return labAlvos;labAlvosK=k;labAlvosN=0;const t=alvosVista('lab');
+export function alvosLab(){const k=S.lab;if(labAlvos&&labAlvosK===k&&++labAlvosN<30)return labAlvos;labAlvosK=k;labAlvosN=0;const t=alvosVista('lab');for(const f of F)if(f.d.lab===k&&f.center){t.push(f.center.clone());t.push(new THREE.Vector3(f.center.x,.35,f.center.z));}
  for(const [x0,x1,z0,z1] of PLANTA_R[k]||[])for(let x=x0+.6;x<=x1-.5;x+=1.1)for(let z=z0+.6;z<=z1-.5;z+=1.1)t.push(new THREE.Vector3(x+OFF.x,.4,z+OFF.z));
  return labAlvos=t;}
 export function occTick(dt){const mode=viewMode();
@@ -132,7 +163,8 @@ export function occTick(dt){const mode=viewMode();
     no zoom, parede que ainda tapa o alvo também sai;
     o que saiu só volta depois de meio segundo livre. */
  if(++occT%4===0){const v=new THREE.Vector2(camera.position.x-controls.target.x,camera.position.z-controls.target.z).normalize();const cam=camera.position;const alvos=mode==='zoom'?alvosVista(mode):mode==='lab'?alvosLab():[];
-  const tapa=o=>{for(const t of alvos){if(o.box.containsPoint(t))continue;occRay.origin.copy(cam);occRay.direction.copy(tmpV.subVectors(t,cam).normalize());const h=occRay.intersectBox(o.box,hitV);if(h&&cam.distanceTo(hitV)<cam.distanceTo(t)-.12)return true;}return false;};
+  /* bloqueia só se a placa da parede (não o que está pendurado nela) fica entre a câmera e o alvo, com folga; alvos encostados na parede não contam */
+  const tapa=o=>{for(const t of alvos){let perto=false;for(const b of o.lajes)if(b.distanceToPoint(t)<.18){perto=true;break;}if(perto)continue;occRay.origin.copy(cam);occRay.direction.copy(tmpV.subVectors(t,cam).normalize());const dt=cam.distanceTo(t);for(const b of o.lajes){const h=occRay.intersectBox(b,hitV);if(h&&cam.distanceTo(hitV)<dt-.25)return true;}}return false;};
   for(const o of OCC){let b=false;
    if(o.mode==='down'||o.mode==='up')b=mode!=='over';
    else if(o.mode==='wall'){
@@ -145,12 +177,22 @@ export function occTick(dt){const mode=viewMode();
    else if(o.mode==='keep')b=mode==='zoom'&&tapa(o);
    if(b){o.blk=true;o.livre=0;}else if(o.blk&&++o.livre>=8)o.blk=false;}
   OCC_SOLID.length=0;for(const o of OCC)if((o.mode==='wall'||o.mode==='keep')&&o.s>.6)OCC_SOLID.push(...o.meshes);}
- const k=Math.min(1,dt*.01);
+ const k=Math.min(1,dt*.01);let anda=mode!==ultModo;ultModo=mode;
  for(const o of OCC){
-  if(o.mode==='wall'||o.mode==='down'||o.mode==='up'){const t=o.blk?.04:1;o.s+=(t-o.s)*k;o.g.scale.y=Math.max(.03,o.s);o.g.visible=o.s>.05||o.mode==='wall';}
+  if(o.mode==='wall'||o.mode==='down'||o.mode==='up'){const t=o.blk?.04:1;if(Math.abs(t-o.s)>.01)anda=true;o.s+=(t-o.s)*k;o.g.scale.y=Math.max(.03,o.s);o.g.visible=o.s>.05||o.mode==='wall';}
   else{const t=o.mode==='keep'?(o.blk?.1:1):(mode==='zoom'?.35:1);o.s+=(t-o.s)*k;const dim=(FADE===1&&S.lab&&o.lab!==S.lab)?.25:1;
-   for(const m of o.meshes){const base=(S.style==='a'&&m.userData.opA!=null)?m.userData.opA:(m.userData.op??o.fadeOp);const op=(o.mode==='fade'?base:1)*o.s*dim;m.material.opacity=op;m.material.transparent=op<.999;m.material.depthWrite=op>.95;m.castShadow=false;}}}}
-export function roomTick(dt){occTick(dt);}
+   for(const m of o.meshes){const base=(S.style==='a'&&m.userData.opA!=null)?m.userData.opA:(m.userData.op??o.fadeOp);const op=(o.mode==='fade'?base:1)*o.s*dim;m.material.opacity=op;m.material.transparent=op<.999;m.material.depthWrite=op>.95;m.castShadow=false;}}}
+ if(anda)wake(300);}
+export function roomTick(dt){occTick(dt);luzes(dt);}
+/* luminárias: no noturno, só as do lab escolhido ficam acesas (na visão geral, todas); acendem/apagam suavemente */
+function luzes(dt){const k=Math.min(1,dt*.008);let anda=false;
+ for(const l of lamps){const on=S.style==='a'&&!S.edit&&(!S.lab||l.lab===S.lab)?1:0;l.on=l.on??on;const n=l.on+(on-l.on)*k;if(Math.abs(n-on)>.01)anda=true;l.on=Math.abs(n-on)<.01?on:n;
+  if(S.style==='a'){l.pl.intensity=l.I*l.on;l.g.traverse(m=>{if(m.isMesh&&m.userData.role==='bulb'){m.material.emissiveIntensity=2.2*l.on;m.material.color.setScalar(.28+.72*l.on);}});}}
+ if(anda)wake(200);}
+/* pede que a próxima passada das paredes reavalie já, sem esperar a cadência de 4 quadros (câmera parou, visão mudou) */
+export function occAgora(){occT=3;}
+/* paredes ainda recolhendo/subindo (ou visão que acabou de mudar) mantêm a cena desenhando: senão o render sob demanda congela a parede no meio do caminho */
+let ultModo='';
 /* não clicar através de paredes */
 export function atrasDeParede(dist){if(!OCC_SOLID.length)return false;const h=ray.intersectObjects(OCC_SOLID,false)[0];return h&&h.distance<dist-.02;}
 
@@ -159,8 +201,8 @@ export function atrasDeParede(dist){if(!OCC_SOLID.length)return false;const h=ra
 /* recado do quadro branco (Admin) */
 export function setRecado(linhas){const m=ROOM.quadro,tex=textTex(['',...linhas],600,320,{bg:'#fbfbfa',fg:'#1f4c96',fs:34,w:500});for(const mt of new Set([m.material,m.userData.std,m.userData.toon]))if(mt){mt.map=tex;mt.needsUpdate=true;}}
 /* planta de cada lab (coordenadas da maquete): limite para mover móveis e moldura de destaque na visão geral */
-export const PLANTA={man:[[0,0],[7.2,0],[7.2,4.15],[5.2,4.15],[5.2,7],[0,7]],ele:[[7.32,0],[10,0],[10,7],[5.32,7],[5.32,4.27],[7.32,4.27]]};
-export const PLANTA_R={man:[[0,5.2,0,7],[5.2,7.2,0,4.15]],ele:[[7.32,10,0,4.27],[5.32,10,4.27,7]]};
+export const PLANTA={man:[[0,0],[7.4,0],[7.4,2.1],[7.2,2.1],[7.2,4.15],[5.2,4.15],[5.2,7],[0,7]],ele:[[7.52,0],[10,0],[10,7],[5.32,7],[5.32,4.27],[7.32,4.27],[7.32,2.22],[7.52,2.22]]};
+export const PLANTA_R={man:[[0,5.2,0,7],[5.2,7.2,0,4.15],[7.2,7.4,0,2.1]],ele:[[7.52,10,0,2.22],[7.32,10,2.22,4.27],[5.32,10,4.27,7]]};
 export function inLab(lab,wx,wz,m=.25){const x=wx-OFF.x,z=wz-OFF.z;return PLANTA_R[lab].some(r=>x>=r[0]+m&&x<=r[1]-m&&z>=r[2]+m&&z<=r[3]-m);}
 export const LABGLOW={};
 for(const [lab,pts] of Object.entries(PLANTA)){const cx=pts.reduce((a,p)=>a+p[0],0)/pts.length,cz=pts.reduce((a,p)=>a+p[1],0)/pts.length;

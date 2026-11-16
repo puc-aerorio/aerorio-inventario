@@ -53,6 +53,8 @@ export const ITEMS={
  luva:{nome:'Luva nitrílica',cl:'epi',un:'pares',min:10},
  dupla:{nome:'Fita dupla face',cl:'quim',un:'rolos',min:1},
  serrafita:{nome:'Serra de fita de bancada',cl:'elet',desc:'Máquina, patrimônio da equipe.',model:'serrafita'},furadeira:{nome:'Furadeira de bancada',cl:'elet',desc:'Máquina, patrimônio da equipe.',model:'furadeira'},ticotico:{nome:'Serra tico-tico de bancada',cl:'elet',desc:'Máquina, patrimônio da equipe.',model:'ticotico'},
+ imp3d:{nome:'Impressora 3D',cl:'elet'},
+ pla:{nome:'Filamento PLA',cl:'mat',un:'rolos',min:1},
  trofeu:{nome:'Troféu',cl:'div',modo:'unidades',desc:'Conquistas da equipe.'}};
 for(const [k,v] of Object.entries(ITEMS)){v.id=k;v.modo=v.modo||CL[v.cl].m;v.un=v.un||(v.modo==='unidades'?'un.':'un.');if(v.min==null)v.min=0;v.obs=v.obs||'';v.spec=v.spec||{};}
 export let eid=0,oid=0;
@@ -64,7 +66,7 @@ export const clean=s=>String(s??'').replace(/[<>]/g,'').replace(/"/g,'”').trim
 export const E=(ref,o={})=>({id:'E'+uid(),ref,nf:false,t:NOW-Math.random()*20*DAY,...o});
 export const O=(tipo,cor,tam,o={})=>({id:'O'+uid(),tipo,cor,tam,nome:'',etq:null,itens:[],...o});
 export const Pt=(id,o={})=>({id,nomeP:'',etq:null,cheia:false,orgs:[],itens:[],...o});
-export const LABS=[{id:'man',nome:'Laboratório de Manufatura',x0:-3.6,x1:3.6,c:new THREE.Vector3(-.2,.2,0),d:19},{id:'ele',nome:'Laboratório de Eletrônica',x0:3.6,x1:6.4,c:new THREE.Vector3(5.0,.2,.2),d:13}];
+export const LABS=[{id:'man',nome:'Laboratório de Manufatura',x0:-3.6,x1:3.6,c:new THREE.Vector3(-.2,.2,0),d:19},{id:'ele',nome:'Laboratório de Eletrônica',x0:1.72,x1:6.4,c:new THREE.Vector3(4.45,.2,.55),d:15}];
 /* móveis do Lab 01 real (posições no mundo = maquete + OFF) e do Lab Drone/Eletrônica */
 export const CARD=['Limas e martelos','Estiletes e tesouras','Chaves','Alicates e pinças','Facas','Medidores','Grampos e cordões','EPIs'];
 export const M=[
@@ -88,7 +90,7 @@ export const M=[
 {id:'flag',lab:'man',nome:'Armário suspenso “fight like a girl”',cod:'17',tipo:'suspenso',under:1,pos:[1.825,0,-2.82],rot:Math.PI/2,real:'#eef0ed',etq:null,partes:[
  Pt('PE',{nomeP:'Porta esquerda',orgs:[O('maletaT','#d8b21f','M',{nome:'Maleta de brocas',itens:[E('brocas',{nivel:2,tipos:[{n:'1 mm'},{n:'2 mm'},{n:'3 mm',aus:true},{n:'4 mm'},{n:'5 mm'},{n:'6 mm'}]})]})]}),Pt('PD',{nomeP:'Porta direita'}),Pt('U',{nomeP:'Embaixo'})]},
 {id:'vao',lab:'man',nome:'Vão cheio de coisas',cod:'22',tipo:'lugar',deco:'vao',W:.5,D:1.35,pos:[1.85,0,-1.475],rot:0,real:'#b07a2a',etq:null,partes:[Pt('L',{nomeP:'Vão'})]},
-{id:'materiais',lab:'man',nome:'Área dos materiais',cod:'23',tipo:'lugar',deco:'materiais',W:.75,D:2.6,pos:[3.225,0,-2.2],rot:0,real:'#b07a2a',etq:null,partes:[Pt('L',{nomeP:'Área'})]},
+{id:'materiais',lab:'man',nome:'Área dos materiais',cod:'23',tipo:'lugar',deco:'materiais',W:.95,D:2.05,pos:[3.32,0,-2.475],rot:0,real:'#b07a2a',etq:null,partes:[Pt('L',{nomeP:'Área'})]},
 {id:'lixo',lab:'man',nome:'Área do lixo',cod:'24',tipo:'lugar',deco:'lixo',W:.67,D:1.3,pos:[-3.265,.15,.8],rot:0,real:'#b07a2a',etq:null,partes:[Pt('L',{nomeP:'Sucata e descarte'})]},
 {id:'gazul',lab:'man',nome:'Gaveteiro azul',cod:'16',tipo:'gaveteiro',pos:[3.35,0,-.45],rot:-Math.PI/2,real:'#1f4c96',etq:'e1',partes:[
  Pt('A',{nomeP:'Top hat'}),...CARD.map((c,i)=>Pt('G'+(i+1),{etq:'g'+(i+1),etqNome:true,
@@ -100,10 +102,36 @@ export const M=[
  Pt('T',{nomeP:'Tampo',itens:[E('serrafita',{units:[U(1)]})]}),Pt('G1',{nomeP:'Gaveta 1',itens:[E('lamina',{qtd:2})]}),Pt('G2',{nomeP:'Gaveta 2'}),Pt('U',{nomeP:'Embaixo'}),Pt('AL',{nomeP:'Ao lado',itens:[E('furadeira',{units:[U(1)]}),E('ticotico',{units:[U(1)]})]})]},
 {id:'pc',lab:'man',nome:'Bancada do PC',cod:'19',tipo:'computador',pos:[-3.25,.15,2.525],rot:Math.PI/2,real:'#e8eae8',etq:null,partes:[Pt('T',{nomeP:'Tampo'}),Pt('U',{nomeP:'Embaixo'})]},
 {id:'carrinho',lab:'man',nome:'Carrinho bandeja',cod:'20',tipo:'estante',pos:[-.675,-.15,-1.0],rot:0,real:'#6f7466',etq:null,partes:[Pt('N1',{nomeP:'Bandeja de cima',itens:[E('dupla',{qtd:2})]}),Pt('N2',{nomeP:'Bandeja do meio'}),Pt('N3',{nomeP:'Bandeja de baixo'})]},
-{id:'bel',lab:'ele',nome:'Bancada de eletrônica',cod:'31',tipo:'bancada',pos:[6.0,0,-1.5],rot:-Math.PI/2,real:'#d6c3a2',etq:null,partes:[
- Pt('T',{orgs:[O('gavetinhas','#c6cbce','M',{nome:'Gaveteiro de resistores',itens:[E('resist',{nivel:2,tipos:[{n:'220 Ω'},{n:'4,7 kΩ'}]})]})]}),Pt('U',{itens:[E('fio',{qtd:6})]})]},
-{id:'est2',lab:'ele',nome:'Estante de baterias',cod:'32',tipo:'estante',n:2,W:1.3,pos:[5.0,0,3.25],rot:Math.PI,real:'#9aa1a8',etq:null,partes:[
- Pt('A'),Pt('N1',{orgs:[O('ferramentas','#5f6468','M',{nome:'Caixa de baterias',itens:[E('lipo',{units:[U(1),U(2),U(3,'boa',{para:'Equipe Uai!rbus',tipo:'externa',desde:NOW-41*DAY}),U(4)]})]})]}),Pt('N2')]}];
+/* Lab de Eletrônica (fotos de 13/11/2026, ajustes do Cava em 14/11): corredor das janelas com a parede curva e as duas bancadas em L irmãs;
+   na parte larga, a entrada (estante suspensa + mesa em L + gaveteiro fixo) em frente à porta, bancada do quadro de luz e mesa do ar na parede da porta.
+   movel:1 = móvel de rodinha que qualquer membro pode reposicionar (encaixa embaixo de bancadas/estantes ou dentro de áreas; o azul, em cima de tampos) */
+{id:'e_imp',lab:'ele',nome:'Bancada da impressora 3D',cod:'31',tipo:'mesaL',W:1.4,D:.7,R:.5,RW:.6,lado:1,pos:[6.05,0,-1.75],rot:-Math.PI/2,real:'#eef0ed',etq:null,partes:[
+ Pt('T',{nomeP:'Tampo',itens:[E('imp3d',{units:[U(1)]})]}),Pt('T2',{nomeP:'Lado curto',itens:[E('pla',{qtd:3})]}),Pt('U',{nomeP:'Embaixo do tampo'}),Pt('U2',{nomeP:'Embaixo do lado curto'})]},
+{id:'e_solda',lab:'ele',nome:'Bancada de solda',cod:'32',tipo:'mesaL',W:1.4,D:.7,R:.5,RW:.6,lado:-1,pos:[6.05,0,-.2],rot:-Math.PI/2,real:'#eef0ed',etq:null,partes:[
+ Pt('T',{nomeP:'Tampo',itens:[E('solda',{units:[U(1),U(2)]}),E('multi',{units:[U(1)]})]}),Pt('T2',{nomeP:'Lado curto',orgs:[O('gavetinhas','#c6cbce','M',{nome:'Gaveteiro de resistores',itens:[E('resist',{nivel:2,tipos:[{n:'220 Ω'},{n:'4,7 kΩ'}]})]})]}),
+ Pt('U',{nomeP:'Embaixo do tampo'}),Pt('U2',{nomeP:'Embaixo do lado curto'})]},
+{id:'e_fundo',lab:'ele',nome:'Fundo do lab',cod:'40',tipo:'lugar',W:1.4,D:1.75,pos:[4.65,0,-2.62],rot:0,real:'#6b7f99',etq:null,partes:[Pt('L',{nomeP:'Área',itens:[E('trofeu',{units:[U(1)]})]})]},
+{id:'e_gv1',lab:'ele',nome:'Gaveteiro de rodinha 1',cod:'33',tipo:'gavvol',n:2,movel:1,pos:[4.22,0,-2.95],rot:Math.PI/2,real:'#eef0ed',etq:null,partes:[
+ Pt('A',{nomeP:'Em cima'}),Pt('G1',{nomeP:'Gaveta de cima'}),Pt('G2',{nomeP:'Gaveta de baixo'})]},
+{id:'e_gv2',lab:'ele',nome:'Gaveteiro de rodinha 2',cod:'34',tipo:'gavvol',n:2,movel:1,pos:[4.22,0,-2.15],rot:Math.PI/2,real:'#eef0ed',etq:null,partes:[
+ Pt('A',{nomeP:'Em cima'}),Pt('G1',{nomeP:'Gaveta de cima'}),Pt('G2',{nomeP:'Gaveta de baixo'})]},
+{id:'e_gv3',lab:'ele',nome:'Gaveteiro de rodinha 3',cod:'41',tipo:'gavvol',n:2,movel:1,pos:[5.64,0,-1.35],rot:-Math.PI,real:'#eef0ed',etq:null,partes:[
+ Pt('A',{nomeP:'Em cima'}),Pt('G1',{nomeP:'Gaveta de cima',itens:[E('fio',{qtd:6})]}),Pt('G2',{nomeP:'Gaveta de baixo'})]},
+{id:'e_gv4',lab:'ele',nome:'Gaveteiro de rodinha 4',cod:'42',tipo:'gavvol',n:2,movel:1,pos:[5.64,0,-.6],rot:0,real:'#eef0ed',etq:null,partes:[
+ Pt('A',{nomeP:'Em cima'}),Pt('G1',{nomeP:'Gaveta de cima'}),Pt('G2',{nomeP:'Gaveta de baixo'})]},
+{id:'e_quadro',lab:'ele',nome:'Bancada do quadro de luz',cod:'35',tipo:'mesaL',W:1.5,D:.7,R:.5,RW:.6,lado:1,pos:[4.25,0,3.15],rot:Math.PI,real:'#eef0ed',etq:null,partes:[
+ Pt('T',{nomeP:'Tampo',orgs:[O('maleta','#2b2f33','M',{nome:'Maleta do rádio',itens:[]})]}),Pt('T2',{nomeP:'Lado curto'}),Pt('U',{nomeP:'Embaixo do tampo'}),Pt('U2',{nomeP:'Embaixo do lado curto'})]},
+{id:'e_ar',lab:'ele',nome:'Mesa do ar-condicionado',cod:'36',tipo:'mesaL',W:1.2,D:.7,pos:[5.75,0,3.15],rot:Math.PI,real:'#eef0ed',etq:null,partes:[
+ Pt('T',{nomeP:'Tampo',orgs:[O('gavetinhas','#c6cbce','M',{nome:'Caixas de conectores',itens:[E('xt60',{qtd:20}),E('jst',{qtd:40})]})]}),Pt('U',{nomeP:'Embaixo do tampo'})]},
+{id:'e_est',lab:'ele',nome:'Estante suspensa da entrada',cod:'39',tipo:'estSusp',W:1.3,pos:[2.37,0,1.02],rot:0,real:'#e9ece9',etq:null,partes:[
+ Pt('N3',{nomeP:'Prateleira de cima',orgs:[O('ferramentas','#5f6468','M',{nome:'Caixa de baterias',itens:[E('lipo',{units:[U(1),U(2),U(3,'boa',{para:'Equipe Uai!rbus',tipo:'externa',desde:NOW-41*DAY}),U(4)]})]})]}),
+ Pt('N2',{nomeP:'Prateleira do meio'}),Pt('N1',{nomeP:'Prateleira de baixo'}),Pt('U',{nomeP:'Embaixo'})]},
+{id:'e_mesa',lab:'ele',nome:'Mesa da entrada',cod:'37',tipo:'mesaL',W:1.22,D:.7,R:.6,RW:.6,lado:-1,pos:[2.37,0,1.14],rot:0,real:'#eef0ed',etq:null,partes:[
+ Pt('T',{nomeP:'Tampo'}),Pt('T2',{nomeP:'Lado curto'}),Pt('U',{nomeP:'Embaixo do tampo'}),Pt('U2',{nomeP:'Embaixo do lado curto'})]},
+{id:'e_chave',lab:'ele',nome:'Gaveteiro fixo',cod:'38',tipo:'gavfixo',pos:[3.27,0,1.065],rot:0,real:'#eef0ed',etq:null,partes:[
+ Pt('A',{nomeP:'Em cima'}),Pt('G1',{nomeP:'Gaveta 1'}),Pt('G2',{nomeP:'Gaveta 2'}),Pt('G3',{nomeP:'Gaveta 3'}),Pt('G4',{nomeP:'Gaveta 4'})]},
+{id:'e_azul',lab:'ele',nome:'Gaveteiro azul pequeno',cod:'43',tipo:'gavazul',movel:1,pos:[3.27,.75,1.0],rot:0,real:'#1f4c96',etq:null,partes:[
+ Pt('A',{nomeP:'Em cima'}),Pt('B1',{nomeP:'Gaveta 1'}),Pt('B2',{nomeP:'Gaveta 2'}),Pt('B3',{nomeP:'Gaveta 3'}),Pt('B4',{nomeP:'Gaveta 4'})]}];
 /* posição de projeto de cada móvel (para o botão "Posição original" da edição) */
 for(const m of M){m.pos0=[...m.pos];m.rot0=m.rot;}
 export const SEM={id:'sem',itens:[E('dupla',{qtd:3,t:NOW-2*DAY})]};

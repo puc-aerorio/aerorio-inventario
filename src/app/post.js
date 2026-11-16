@@ -7,7 +7,7 @@ import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { F, FADE, LITE, S, app } from './state.js';
+import { F, FADE, LITE, S, app, wake } from './state.js';
 import { BGS, camera, labG, renderer, scene } from './scene.js';
 
 /* ================= pós-processamento ================= */
@@ -30,17 +30,23 @@ export function ghostSize(){const v=renderer.getDrawingBufferSize(new THREE.Vect
  if(!GH.rt){GH.rt=new THREE.WebGLRenderTarget(w,h,{type:THREE.HalfFloatType});for(const k of['a','b','c'])GH[k]=new THREE.WebGLRenderTarget(w,h,{type:THREE.HalfFloatType,depthBuffer:false});}
  else for(const k of['rt','a','b','c'])GH[k].setSize(w,h);}
 export function ghostPre(dt){if(FADE!==3)return null;
- if(S.lab!==GH.lab){GH.lab=S.lab;if(S.lab){GH.other=S.lab==='man'?'ele':'man';GH.amt=0;}}
- GH.amt+=((S.lab?1:0)-GH.amt)*Math.min(1,dt*.005);if(GH.amt<.02||!GH.other)return null;
- const keep=new Set([labG[GH.other],...F.filter(f=>f.d.lab===GH.other).map(f=>f.g)]);const hid=[];
- for(const c of scene.children){if(c.isLight||keep.has(c)||!c.visible)continue;c.visible=false;hid.push(c);}
+ /* o outro lab vai para a camada 1: some do passe principal mas continua projetando sombra (a câmera da sombra vê todas as camadas).
+    Ao sair do lab, o desfoque diminui até zero e só então ele volta à camada 0 — sem sombra nem móvel "nascendo" de repente. */
+ if(!GH.luzes){GH.luzes=1;scene.traverse(o=>{if(o.isLight){o.layers.enableAll();if(o.shadow)o.shadow.camera.layers.enableAll();}});}
+ if(S.lab!==GH.lab){GH.lab=S.lab;if(S.lab){const o=S.lab==='man'?'ele':'man';if(GH.other&&GH.other!==o)camada(GH.other,0);GH.other=o;GH.amt=Math.min(GH.amt,.02);}}
+ GH.amt+=((S.lab?1:0)-GH.amt)*Math.min(1,dt*.005);GH.anda=!!GH.other&&Math.abs((S.lab?1:0)-GH.amt)>.015;/* continua desenhando até a transição acabar */
+ if(!GH.other)return null;
+ if(!S.lab&&GH.amt<.02){camada(GH.other,0);GH.other=null;GH.anda=false;return null;}
+ camada(GH.other,1);
  const st=S.edit?'e':S.style,au=renderer.shadowMap.autoUpdate,bg=scene.background;renderer.shadowMap.autoUpdate=false;scene.background=BGS[st];
- renderer.setRenderTarget(GH.rt);renderer.render(scene,camera);hid.forEach(c=>c.visible=true);renderer.shadowMap.autoUpdate=au;
+ camera.layers.set(1);renderer.setRenderTarget(GH.rt);renderer.render(scene,camera);camera.layers.set(0);renderer.shadowMap.autoUpdate=au;
  const px=1/GH.rt.width,py=1/GH.rt.height,r=GH.amt,bu=GH.blur.uniforms;GH.q.material=GH.blur;
  for(const [src,dst,dx,dy] of[[GH.rt,GH.a,.8*px,0],[GH.a,GH.b,0,.8*py],[GH.b,GH.a,1.7*px,0],[GH.a,GH.b,0,1.7*py]]){bu.t.value=src.texture;bu.dir.value.set(dx*r,dy*r);renderer.setRenderTarget(dst);GH.q.render(renderer);}
  const fu=GH.fin.uniforms;fu.t.value=GH.b.texture;fu.wash.value.set(st==='a'?'#141a21':st==='c'?'#f3e3c0':'#eef2f6');fu.k.value=(st==='a'?.18:.2)*r;fu.d.value=.45*r;GH.q.material=GH.fin;renderer.setRenderTarget(GH.c);GH.q.render(renderer);renderer.setRenderTarget(null);
- const hid2=[];for(const c of keep)if(c.visible){c.visible=false;hid2.push(c);}scene.background=GH.c.texture;return {hid:hid2,bg};}
-export function ghostPost(g){if(!g)return;g.hid.forEach(c=>c.visible=true);scene.background=g.bg;}
+ scene.background=GH.c.texture;return {bg};}
+export function ghostPost(g){if(!g)return;scene.background=g.bg;}
+function camada(lab,n){const raizes=[labG[lab],...F.filter(f=>f.d.lab===lab).map(f=>f.g)];for(const r of raizes)r.traverse(o=>{if(!o.isLight)o.layers.set(n);});}
 export function resize(){const w=app.clientWidth,h=app.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();if(post)post.c.setSize(w,h);ghostSize();}
 new ResizeObserver(resize).observe(app);resize();
 
+if(typeof location!=='undefined'&&location.hash.includes('dbg'))window.__GH=GH;
