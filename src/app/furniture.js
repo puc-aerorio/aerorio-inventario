@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { F, app, halos, pick, wake } from './state.js';
-import { CARD, CL, IT, M, NIVEIS, OT, SZ, isAlert, unitsOf } from './data.js';
+import { CARD, CL, IT, M, NIVEIS, OT, SZ, TRANSP, isAlert, orgH, orgSz, orgTam, unitsOf } from './data.js';
 import { shade } from './html.js';
 import { box, cyl, iconTexture, mesh, numTexture, scene, sprite } from './scene.js';
 import { X, canvasTex, etqTex, texPlane, textTex, tomadaM, trans } from './room.js';
@@ -55,7 +55,7 @@ export const BUILD_ID={
    const geo=new THREE.ExtrudeGeometry(s,{depth:Lt,bevelEnabled:false,curveSegments:10});geo.translate(0,0,-Lt/2);const top=mesh(g,geo,'#f4f5f3','clay',0,H-T,zc,{r:.45});if(!k)top0=top;
    for(const sg of[-1,1]){X(g,-W/2+.003,W/2-.003,H-T,H,zc+sg*(L/2-.006)-.003,zc+sg*(L/2-.006)+.003+(sg>0?.003:-.003),'#15181b','color',{r:.5});
     const z=zc+sg*(L/2-.04);X(g,-.3,.3,.06,H-T-.03,z-.02,z+.02,'#15181b','color',{r:.5});X(g,-.38,.38,0,.06,z-.04,z+.04,'#15181b','color',{r:.5});X(g,-.4,.4,H-T-.035,H-T,z-.025,z+.025,'#15181b','color');}}
-  return {g,parts:{T:part(g,H,W-.12,2*L-.12,.34,'top',{board:top0}),U:part(g,.01,.7,2*L-.3,.6,'under',{board:top0})}};},
+  return {g,parts:{T:part(g,H,W-.12,2*L-.12,.34,'top',{board:top0}),U:part(g,.01,.7,2*L-.3,.6,'under',{board:top0,seg:[{z:-.9,d:1.5},{z:.9,d:1.5}]})}};},
  e10(f){const g=new THREE.Group(),W=.84,D=.45,H=1.75,yc=.66,ys=.95,c='#cfd3d4',t=.025;// prateleira de baixo baixa, de cima alta; armário 10 embaixo
   X(g,-W/2,-W/2+t,0,H,-D/2,D/2,c);X(g,W/2-t,W/2,0,H,-D/2,D/2,c);const top=X(g,-W/2,W/2,H-t,H,-D/2,D/2,c);X(g,-W/2+t,W/2-t,0,H,-D/2,-D/2+.012,'#bfc4c6');X(g,-W/2+t,W/2-t,0,.05,-D/2,D/2-.02,'#9ea4a7');
   const cab=X(g,-W/2+t,W/2-t,yc,yc+.025,-D/2,D/2,c);const sh=X(g,-W/2+t,W/2-t,ys,ys+.022,-D/2,D/2,c);const inn=X(g,-W/2+t,W/2-t,.33,.345,-D/2,D/2-.03,c);
@@ -116,7 +116,7 @@ Object.assign(BUILD,{
   X(g,-W/2,-W/2+t,0,top,-D/2,D/2,wh);X(g,W/2-t,W/2,0,top,-D/2,D/2,wh);X(g,-W/2+t,W/2-t,top-n*sp-.02,top,-D/2,-D/2+.012,'#dfe2df');
   const bs=[];for(let k=0;k<=n;k++){const y=top-k*sp;bs.push(X(g,-W/2+t,W/2-t,y-.022,y,-D/2+.012,D/2,wh));}
   for(let i=1;i<=n;i++){const yb=top-(n-i+1)*sp;parts['N'+i]=part(g,yb,W-.1,D-.05,sp-.05,'shelf',{board:bs[n-i+1]});}
-  const yb=top-n*sp-.022;parts.U=part(g,.012,W-.1,D-.06,Math.min(1.3,yb-.05),'under',{board:bs[n]});return {g,parts};},
+  const yb=top-n*sp-.022;parts.U=part(g,.012,W-.1,D-.06,Math.min(1.3,yb-.05),'under',{board:bs[n]});parts.A=part(g,top,W-.1,D-.05,.3,'above',{board:bs[0]});return {g,parts};},
  /* estante alta branca, laterais e fundo fechados */
  estanteAlta(f){const d=f.d,W=d.W||.95,D=.4,H=d.H||2.05,n=d.n||5,g=new THREE.Group(),parts={},wh='#e9ece9';
   X(g,-W/2,-W/2+.02,0,H,-D/2,D/2,wh);X(g,W/2-.02,W/2,0,H,-D/2,D/2,wh);X(g,-W/2,W/2,0,H,-D/2,-D/2+.012,'#dfe2df');
@@ -124,7 +124,7 @@ Object.assign(BUILD,{
   for(let i=1;i<=n;i++){const k=n-i;parts['N'+i]=part(g,ys[k],W-.08,D-.05,ys[k+1]-ys[k]-.04,'shelf',{board:bs[k]});}
   parts.A=part(g,ys[n],W-.06,D-.04,.3,'above',{board:bs[n]});return {g,parts};},
  suspenso(f){const d=f.d,W=d.W||1.3,D=.45,yb=d.yb||1.42,yt=yb+.6,t=.025,ad=.38,c=d.real||WHITE,g=new THREE.Group();// armário suspenso: suportes laterais até o chão, portas de correr esquerda/direita
-  X(g,-W/2,-W/2+t,0,yt,-D/2,D/2,c);X(g,W/2-t,W/2,0,yt,-D/2,D/2,c);X(g,-W/2+t,W/2-t,yt-t,yt,-D/2,-D/2+ad,c);const bot=X(g,-W/2+t,W/2-t,yb,yb+.02,-D/2,-D/2+ad,c);X(g,-W/2+t,W/2-t,yb,yt,-D/2,-D/2+.012,c);
+  X(g,-W/2,-W/2+t,0,yt,-D/2,D/2,c);X(g,W/2-t,W/2,0,yt,-D/2,D/2,c);const topo=X(g,-W/2+t,W/2-t,yt-t,yt,-D/2,-D/2+ad,c);const bot=X(g,-W/2+t,W/2-t,yb,yb+.02,-D/2,-D/2+ad,c);X(g,-W/2+t,W/2-t,yb,yt,-D/2,-D/2+.012,c);
   const half=(W-2*t)/2,zf=-D/2+ad,parts={};
   ['PE','PD'].forEach((id,i)=>{const dg=new THREE.Group();g.add(dg);const x0=-W/2+t+i*half,zz=zf-(i?0:.017);X(dg,x0-(i?.01:0),x0+half+(i?0:.01),yb+.03,yt-t-.005,zz-.014,zz,c);
    const fh=mesh(dg,new THREE.CylinderGeometry(.018,.018,.005,16),'#5d6266','color',x0+(i?.07:half-.05),(yb+yt)/2,zz+.002);fh.rotation.x=Math.PI/2;
@@ -133,6 +133,7 @@ Object.assign(BUILD,{
   if(d.rotulo)texPlane(g,.1,.025,textTex(d.rotulo,160,40,{bg:'#fff',fs:22}),0,yt-.08,zf+.002);
   if(d.tomada||d.under)tomadaM(g,0,1.0,-D/2+.03);
   if(d.under)parts.U=part(g,.012,W-.1,D-.08,Math.min(1.25,yb-.12),'under',{board:bot});
+  parts.A=part(g,yt,W-2*t-.04,ad-.04,.3,'above',{x:0,z:-D/2+ad/2,board:topo});/* o tampo do armário também guarda coisas */
   return {g,parts};},
  bancada(f){return mesaEsc(f,f.d.W||1.25,false);},
  serra(f){return mesaEsc(f,1.2,true);},
@@ -169,7 +170,7 @@ export function tray3d(parent,w,d,h,hex,role='color'){const g=new THREE.Group();
  box(g,w,t,d,0,t/2,0,hex,role);box(g,w,h,t,0,h/2,-d/2+t/2,hex,role);box(g,w,h,t,0,h/2,d/2-t/2,hex,role);box(g,t,h,d,-w/2+t/2,h/2,0,hex,role);box(g,t,h,d,w/2-t/2,h/2,0,hex,role);return g;}
 export const CESTO_A=canvasTex(64,64,(x)=>{x.fillStyle='#fff';x.fillRect(0,0,64,64);x.fillStyle='#000';for(let i=0;i<4;i++)for(let j=0;j<3;j++)x.fillRect(6+i*15,10+j*18,8,10);});CESTO_A.colorSpace=THREE.NoColorSpace;
 export function orgVidro(g,w,h,d,x,y,z,op=.32){const m=box(g,w,h,d,x,y,z,'#dfe8ee','glass2',{cast:false});return trans(m,op);}
-export function buildOrg(o,parent){const g=new THREE.Group();parent.add(g);const [W,D]=o._sz||SZ[o.tam];const H=OT[o.tipo].h[o.tam];const c=o.cor,dk=shade(c,.7),lt=shade(c,1.2);
+export function buildOrg(o,parent){const g=new THREE.Group();parent.add(g);const [W,D]=o._sz||orgSz(o);const H=orgH(o);const tr=o.cor===TRANSP;const c=o.cor,dk=shade(c,.7),lt=shade(c,1.2);
  g.userData={org:o.id,openAmt:0,W,D,H};let inner=new THREE.Group();let innerY=.012,closed=false;const t=.008;
  const tampa=(hh,fn)=>{const pv=new THREE.Group();pv.position.set(0,hh,-D/2);g.add(pv);fn(pv);g.userData.lid=pv;};
  if(o.tipo==='caixaTrava'){for(const [w,h,d,x,y,z] of[[W,t,D,0,t/2,0],[W,H,t,0,H/2,-D/2],[W,H,t,0,H/2,D/2],[t,H,D,-W/2,H/2,0],[t,H,D,W/2,H/2,0]])orgVidro(g,w,h,d,x,y,z);
@@ -182,17 +183,41 @@ export function buildOrg(o,parent){const g=new THREE.Group();parent.add(g);const
   tampa(hb,pv=>{box(pv,W,H-hb,D,0,(H-hb)/2,D/2,o.tipo==='maleta'?lt:dk,'color');box(pv,W*.3,.012,.014,0,H-hb+.015,D/2,'#1c1c1c','color');});
   if(o.tipo==='maleta')for(const s of[-1,1])box(g,.03,.02,.008,s*W*.28,hb*.9,D/2+.004,'#1c1c1c','color',{cast:false});else box(g,.03,.035,.01,0,hb-.01,D/2+.005,'#2b2e31','color');
   closed=true;innerY=hb;}
- else if(o.tipo==='gavetinhas'){box(g,W,H,D,0,H/2,0,c,'color');const dr=[];for(let k=0;k<2;k++){const dg=new THREE.Group();dg.position.set(0,H*(k+.5)/2,D/2);g.add(dg);box(dg,W*.9,H/2*.82,.012,0,0,.006,lt,'color');box(dg,W*.3,H*.06,.012,0,H*.08,.016,'#c8302c','color');dr.push(dg);}
-  g.userData.drawers=dr;closed=true;innerY=H+.01;}
+ else if(o.tipo==='gavetinhas'){/* gaveteiro de plástico: laterais e tampo transparentes, gavetas com os itens dentro */
+  const nl=OT.gavetinhas.nlv[orgTam(o)],pt=.012,lh=(H-pt*2)/nl;const fr=tr?'#e9f1f5':c;
+  box(g,W,pt,D,0,pt/2,0,fr,'color');box(g,W,pt,D,0,H-pt/2,0,fr,'color');
+  for(const sx of[-1,1])for(const sz of[-1,1])box(g,.014,H,.014,sx*(W/2-.007),H/2,sz*(D/2-.007),fr,'color');
+  orgVidro(g,W,H,.006,0,H/2,-D/2+.003,.3);for(const sx of[-1,1])orgVidro(g,.006,H,D,sx*(W/2-.003),H/2,0,.22);
+  const dr=[],din=[];
+  for(let k=0;k<nl;k++){const dg=new THREE.Group();dg.position.set(0,pt+lh*k,D/2);g.add(dg);
+   orgVidro(dg,W-.03,lh*.86,.01,0,lh*.45,-.005,.5);box(dg,W*.34,lh*.1,.014,0,lh*.7,.004,fr,'color');
+   orgVidro(dg,W-.03,.006,D*.92,0,.006,-D*.46,.4);for(const sx of[-1,1])orgVidro(dg,.006,lh*.5,D*.92,sx*(W/2-.018),lh*.28,-D*.46,.3);
+   const gi=new THREE.Group();gi.position.set(0,.01,-D*.5);dg.add(gi);din.push(gi);dr.push(dg);}
+  g.userData.drawers=dr;g.userData.dinn=din;g.userData.lh=lh;closed=false;innerY=H+.01;}
  else if(o.tipo==='cesto'){for(const [w,d,x,z,ry] of[[W,0,0,D/2,0],[W,0,0,-D/2,0],[D,0,W/2,0,Math.PI/2],[D,0,-W/2,0,Math.PI/2]]){const m=mesh(g,new THREE.PlaneGeometry(w,H),c,'color',x,H/2,z,{cast:false});m.rotation.y=ry;m.material.alphaMap=CESTO_A;m.material.alphaTest=.5;m.material.side=THREE.DoubleSide;}box(g,W,t,D,0,t/2,0,c,'color');}
  else if(o.tipo==='papelao'){tray3d(g,W,D,H,c);box(g,W*.4,H*.3,.004,0,H*.55,D/2+.003,'#ffffff','paint',{cast:false});}
- else if(o.tipo==='saco'){const s=mesh(g,new THREE.SphereGeometry(.5,24,16),c,'color',0,H*.45,0);s.scale.set(W,H*.9,D);box(g,W*.7,.006,.01,0,H*.88,0,dk,'color',{cast:false});closed=true;innerY=H+.01;}
+ else if(o.tipo==='saco'){/* saco plástico fino e translúcido, com zip no fundo e etiqueta branca */
+  const sk=tr?'#e3eef4':c;const film=box(g,W,.004,D,0,.002,0,sk,'glass2',{cast:false});trans(film,.5);
+  const m=mesh(g,new THREE.SphereGeometry(.5,24,12,0,Math.PI*2,0,Math.PI/2),sk,'glass2',0,.004,0,{cast:false});m.scale.set(W*.96,H*1.9,D*.94);trans(m,.34);
+  const zp=box(g,W*.96,.006,.008,0,.006,-D*.47,dk,'color',{cast:false});zp.userData.keep=1;box(g,W*.32,.003,D*.2,-W*.2,.005,D*.3,'#ffffff','paint',{cast:false});
+  closed=false;innerY=.012;}
+ else if(o.tipo==='pote'){/* pote cilíndrico translúcido com tampa */
+  const hb=H*.84,r=W/2;const m=mesh(g,new THREE.CylinderGeometry(r,r*.94,hb,28),tr?'#e3eef4':c,'glass2',0,hb/2,0,{cast:false});trans(m,.34);box(g,r*1.7,.004,r*1.7,0,.002,0,'#e3eef4','glass2',{cast:false});
+  tampa(hb,pv=>{const l=mesh(pv,new THREE.CylinderGeometry(r*1.04,r*1.04,H-hb,28),tr?'#f4f7f9':lt,'color',0,(H-hb)/2,D/2);});closed=true;innerY=.012;}
  else tray3d(g,W,D,H,c);
+ if(tr&&!['gavetinhas','saco','pote','caixaTrava','divisorias'].includes(o.tipo))g.traverse(x=>{if(x.isMesh&&x.userData.base&&!x.material.alphaMap&&!x.userData.op)trans(x,.38);});
  g.add(inner);inner.position.y=innerY;g.userData.inner=inner;g.userData.closed=closed;g.userData.iw=W*.84;g.userData.id_=D*.78;
  g.traverse(x=>{if(x.isMesh)x.userData.org=o.id;});return g;}
 /* peças de item: ícone flutuante sobre base colorida */
 export function piece(parent,e,size){const g=new THREE.Group();parent.add(g);const it=IT(e),c=CL[it.cl].c;g.userData.entry=e.id;
  if(it.model&&MODEL[it.model]){const h=MODEL[it.model](g);const sp=sprite(iconTexture(it.cl),.12);sp.position.y=h+.1;g.add(sp);g.userData.icon=sp;const ns=sprite(numTexture(String(unitsOf(e))),.13);ns.position.y=h+.2;ns.visible=false;g.add(ns);g.userData.num=ns;
+  const al=isAlert(e);g.traverse(x=>{x.userData.entry=e.id;x.userData.alert=al;});return g;}
+ if(it.modo==='conjunto'&&it.rec&&OT[it.rec.tipo]){/* caixa/kit com o recipiente escolhido (saco, pote, gaveteiro…) */
+  const ro={id:'rec'+e.id,tipo:it.rec.tipo,cor:it.rec.cor,tam:'M',itens:[]};const [rw,rd]=orgSz(ro),rh=orgH(ro);const sc=Math.min(size*1.2/rw,size*1.2/rd);
+  const rg=buildOrg(ro,g);rg.scale.setScalar(sc);rg.traverse(x=>{delete x.userData.org;});const lv=(e.nivel||0)/3;
+  if(lv>0)box(rg,rw*.8,Math.max(.008,rh*.7*lv),rd*.7,0,.01+rh*.35*lv,0,c,'color',{cast:false});
+  const sp=sprite(iconTexture(it.cl),size*.95);sp.position.y=rh*sc+size*.55;g.add(sp);g.userData.icon=sp;
+  const ns=sprite(numTexture(NIVEIS[e.nivel]),size*1.1);ns.position.y=sp.position.y+size*.75;ns.visible=false;g.add(ns);g.userData.num=ns;
   const al=isAlert(e);g.traverse(x=>{x.userData.entry=e.id;x.userData.alert=al;});return g;}
  if(it.modo==='conjunto'){const w=size*1.15;tray3d(g,w,w*.8,size*.5,'#cfd5da','color');const lv=(e.nivel||0)/3;if(lv>0)box(g,w*.86,size*.42*lv,w*.66,0,.006+size*.21*lv,0,c,'color');}
  else{const b=cyl(g,size*.42,.012,0,.006,0,c,'color',24);b.castShadow=false;}
@@ -202,19 +227,25 @@ export function piece(parent,e,size){const g=new THREE.Group();parent.add(g);con
  const al=isAlert(e);g.traverse(x=>{x.userData.entry=e.id;x.userData.alert=al;});return g;}
 /* Preenchimento: organizadores em fileiras, reduzidos por igual até caberem na área e na altura da parte; itens soltos na faixa que sobra, com peça limitada pela célula e pela altura. Nada atravessa prateleira nem lateral. */
 export function layout(parent,w,d,entries,orgs,size,hmax=9){const placed=[],gap=.02;
- const fundo=s=>{let x=0,z=0,row=0;for(const o of orgs){const [ow,od]=SZ[o.tam];const a=Math.min(ow*s,w),b=od*a/ow;if(x>0&&x+a>w+1e-3){x=0;z+=row+gap;row=0;}x+=a+gap;row=Math.max(row,b);}return z+row;};
- let s=1;if(orgs.length){const hs=Math.max(...orgs.map(o=>OT[o.tipo].h[o.tam]));s=Math.min(1,hmax*.9/hs);const cabe=d*(entries.length?.68:1);while(s>.35&&fundo(s)>cabe)s-=.05;}
+ const fundo=s=>{let x=0,z=0,row=0;for(const o of orgs){const [ow,od]=orgSz(o);const a=Math.min(ow*s,w),b=od*a/ow;if(x>0&&x+a>w+1e-3){x=0;z+=row+gap;row=0;}x+=a+gap;row=Math.max(row,b);}return z+row;};
+ let s=1;if(orgs.length){const hs=Math.max(...orgs.map(o=>orgH(o)));s=Math.min(1,hmax*.9/hs);const cabe=d*(entries.length?.68:1);while(s>.35&&fundo(s)>cabe)s-=.05;}
  let x=-w/2,z=-d/2,rowD=0;
- for(const o of orgs){const [ow,od]=SZ[o.tam];o._sz=[ow,od];const a=Math.min(ow*s,w),sc=a/ow,b=od*sc;
+ for(const o of orgs){const [ow,od]=orgSz(o);o._sz=[ow,od];const a=Math.min(ow*s,w),sc=a/ow,b=od*sc;
   if(x>-w/2&&x+a>w/2+1e-3){x=-w/2;z+=rowD+gap;rowD=0;}const g=buildOrg(o,parent);g.scale.setScalar(sc);g.userData.sc=sc;g.position.set(x+a/2,0,z+b/2);x+=a+gap;rowD=Math.max(rowD,b);placed.push(g);
-  if(o.itens.length)gridPlace(g.userData.inner,ow*.8,od*.7,o.itens,Math.min(size/sc,Math.min(ow,od)*.5));}
+  if(o.itens.length){const di=g.userData.dinn;
+   if(di){const per=Math.ceil(o.itens.length/di.length);di.forEach((gi,k)=>{const ch=o.itens.slice(k*per,(k+1)*per);if(ch.length)gridPlace(gi,ow*.8,od*.7,ch,Math.min(size/sc,Math.min(ow,od)*.3),g.userData.lh*.92);});}
+   else gridPlace(g.userData.inner,ow*.8,od*.7,o.itens,Math.min(size/sc,Math.min(ow,od)*.5));}}
  const z0=orgs.length?Math.min(d/2-.07,z+rowD+.03):-d/2;const remD=Math.max(.07,d/2-z0);
  if(entries.length){const g=new THREE.Group();parent.add(g);g.position.z=z0+remD/2;gridPlace(g,w*.92,remD,entries,size,hmax);}return placed;}
 export function gridPlace(parent,w,d,entries,size,hmax=9){const n=entries.length;const cols=Math.max(1,Math.min(n,Math.round(Math.sqrt(n*w/d))||1));const rows=Math.ceil(n/cols);const cw=w/cols,cd=d/rows;
  const s=Math.min(size,cw*.8,cd*1.1,hmax/1.6);entries.forEach((e,k)=>{const p=piece(parent,e,s);p.position.set(-w/2+cw*(k%cols+.5),0,-d/2+cd*(Math.floor(k/cols)+.5));});}
 export function buildContents(f,pid){const pt=f.parts[pid],p=f.d.partes.find(x=>x.id===pid);const c=pt.content;wake(700);
  for(const ch of [...c.children]){if(ch===pt.halo||ch===pt.mark)continue;c.remove(ch);ch.traverse(x=>{if(x.isMesh)x.geometry.dispose();});}
- const size=pt.k==='drawer'?.085:.13;pt.orgG=layout(c,pt.w,pt.d,p.itens,p.orgs,size,(pt.k==='shelf'||pt.k==='under')?pt.h:9);
+ const size=pt.k==='drawer'?.085:.13;const hm=(pt.k==='shelf'||pt.k==='under')?pt.h:9;
+ if(pt.seg){/* parte com pernas ou divisões no meio: o conteúdo se reparte entre os trechos livres */
+  pt.orgG=[];const n=pt.seg.length,io=Math.ceil(p.orgs.length/n),ii=Math.ceil(p.itens.length/n);
+  pt.seg.forEach((sg,k)=>{const o=p.orgs.slice(k*io,(k+1)*io),it=p.itens.slice(k*ii,(k+1)*ii);if(!o.length&&!it.length)return;const sub=new THREE.Group();sub.position.z=sg.z;c.add(sub);pt.orgG.push(...layout(sub,pt.w,sg.d,it,o,size,hm));});}
+ else pt.orgG=layout(c,pt.w,pt.d,p.itens,p.orgs,size,hm);
  c.traverse(x=>{if(x.isMesh||x.isSprite){x.userData.f=f;x.userData.part=pid;x.userData.lab=f.d.lab;}});applyStyleTo(c);collect(f);}
 export function collect(f){f.meshes=[];f.sprites=[];f.g.traverse(o=>{if(o.isMesh&&o.userData.base){f.meshes.push(o);o.userData.f=f;o.userData.lab=f.d.lab;}if(o.isSprite)f.sprites.push(o);});
  pick.length=0;F.forEach(x=>x.meshes&&pick.push(...x.meshes));}

@@ -49,7 +49,7 @@ export function setOpen(f,pid,keep){for(const [id,pt] of Object.entries(f.parts)
 }
 export function orgOpen(f,pid,oid,to){const g=f.parts[pid]?.orgG?.find(x=>x.userData.org===oid);if(!g)return;const from=g.userData.openAmt;
  tween({ms:to?560:340,ease:to?'spring':'out',key:'og'+oid,update:p=>{const v=from+(to-from)*p;g.userData.openAmt=v;if(g.userData.lid)g.userData.lid.rotation.x=-v*1.75;
-  if(g.userData.drawers)g.userData.drawers[1].position.z=g.userData.D/2+v*g.userData.D*.45;g.userData.inner.visible=!g.userData.closed||v>.4;g.position.y=v*.012;}});}
+  if(g.userData.drawers){const dr=g.userData.drawers,k=dr[dr.length-1];k.position.z=g.userData.D/2+v*g.userData.D*.45;}g.userData.inner.visible=!g.userData.closed||v>.4;g.position.y=v*.012;}});}
 /* móveis entre a câmera e o foco somem (corte) */
 export let cutTick=0;
 export function updateCut(){if(++cutTick%6)return;const tgt=S.focusT&&(S.stack.length||S.loc||S.carry&&S.carry.stage==='confirm');

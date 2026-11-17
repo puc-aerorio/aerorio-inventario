@@ -64,7 +64,7 @@ export function achata() {
   }
   for (const o of (SEM.orgs || [])) db.ORGANIZADORES[o.id] = org(o, '');
   for (const [id, it] of Object.entries(ITEMS)) {
-    db.ITENS[id] = { nome: txt(it.nome), classe: CL[it.cl] ? CL[it.cl].n : 'Diversos', modo: MODO[it.modo] || 'Contável', unidade: txt(it.un), minimo: +it.min || 0, descricao: txt(it.desc), especificacao: specTxt(it.spec), identificador: identTxt(it.ident), modelo_3d: txt(it.model), observacoes: txt(it.obs), estado: 'Ativo', criado_em: txt(it.criado) };
+    db.ITENS[id] = { nome: txt(it.nome), classe: CL[it.cl] ? CL[it.cl].n : 'Diversos', modo: MODO[it.modo] || 'Contável', unidade: txt(it.un), minimo: +it.min || 0, descricao: txt(it.desc), especificacao: specTxt(it.spec), identificador: identTxt(it.ident), modelo_3d: it.rec ? `rec:${it.rec.tipo}:${it.rec.cor}` : txt(it.model), observacoes: txt(it.obs), estado: 'Ativo', criado_em: txt(it.criado) };
   }
   for (const x of allLoc()) {
     const e = x.e, it = ITEMS[e.ref]; if (!it) continue;
@@ -168,7 +168,8 @@ export function hidrata(db) {
     const modo = MODO_IN[norm(r.modo)] || (CL[cl] && CL[cl].m) || 'contavel';
     const it = { id: r.id, nome: txt(r.nome), cl, modo, un: txt(r.unidade) || 'un.', min: +r.minimo || 0, desc: txt(r.descricao), spec: parseSpec(r.especificacao), obs: txt(r.observacoes), criado: txt(r.criado_em) };
     const id_ = parseIdent(r.identificador); if (id_) it.ident = id_;
-    if (txt(r.modelo_3d)) it.model = txt(r.modelo_3d);
+    const m3 = txt(r.modelo_3d), mr = /^rec:([A-Za-z0-9]+):(#[0-9a-fA-F]{3,8})$/.exec(m3);
+    if (mr && OT[mr[1]]) it.rec = { tipo: mr[1], cor: mr[2] }; else if (m3) it.model = m3;
     ITEMS[r.id] = it;
   }
   // organizadores
@@ -226,7 +227,7 @@ export function vista() {
   for (const lote of ST.fila) for (const op of lote.ops) applyOp(v, op);
   return v;
 }
-export const assinatura = p => JSON.stringify([p.itens.map(e => [e.id, e.qtd, e.nivel, (e.units || []).length, e.ref]), p.orgs.map(o => [o.id, o.tipo, o.cor, o.tam, o.itens.map(e => [e.id, e.qtd, e.nivel, (e.units || []).length])])]);
+export const assinatura = p => JSON.stringify([p.itens.map(e => [e.id, e.qtd, e.nivel, (e.units || []).length, e.ref, (ITEMS[e.ref] || {}).rec && JSON.stringify(ITEMS[e.ref].rec)]), p.orgs.map(o => [o.id, o.tipo, o.cor, o.tam, o.itens.map(e => [e.id, e.qtd, e.nivel, (e.units || []).length])])]);
 export function aplicaNaTela() {
   if (S.carry || S.oc || document.querySelector('#modal.on')) { adiado = true; return; }
   adiado = false;

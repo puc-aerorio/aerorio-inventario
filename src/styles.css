@@ -93,10 +93,10 @@ button,input,textarea,select{font:inherit;color:inherit}
 /* números */
 .hero{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin:4px 0 10px}
 .hero .big{display:flex;flex-direction:column}
-.hero .big .n{font:600 2.4rem/1 var(--cond)}
-.hero .big .c{font-size:.72rem;color:var(--ink3)}
-.cnt{display:inline-flex;align-items:center;gap:4px;font:600 .95rem/1 var(--cond);color:var(--ink2)}
-.cnt .i{width:15px;height:15px}
+.hero .big .n{font:600 3.1rem/.95 var(--cond)}
+.hero .big .c{font-size:.78rem;color:var(--ink3)}
+.cnt{display:inline-flex;align-items:center;gap:4px;font:600 1.15rem/1 var(--cond);color:var(--ink2)}
+.cnt .i{width:16px;height:16px}
 .cnt.w{color:#B07D00}
 #app[data-style=a] .cnt.w{color:#ffcf6b}
 .cnts{display:flex;gap:10px;align-items:center}
@@ -199,6 +199,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 .irow.open{background:var(--chip)}
 .irow.esg{opacity:.55}
 .irow .nm{font-weight:600;font-size:.96rem;line-height:1.2}
+.irow .nm .spx{display:block;font-weight:500;color:var(--ink3);font-size:.76rem;line-height:1.25;margin-top:1px}
 .irow .nm small{display:block;font-weight:500;color:var(--ink3);font-size:.74rem}
 .irow .q{font:600 1.55rem/1 var(--cond);text-align:right;display:flex;align-items:baseline;gap:4px;justify-content:flex-end}
 .irow .q small{font:500 .74rem var(--sans);color:var(--ink3)}
@@ -340,6 +341,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 .cols8{display:flex;gap:6px;flex-wrap:wrap}
 .cols8 button{width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
 .cols8 button.on{border-color:var(--ink)}
+.cols8 button.tr{background:repeating-conic-gradient(#fff 0 25%,#d7e3ea 0 50%) 50%/10px 10px;box-shadow:inset 0 0 0 1px rgba(60,90,110,.45)}
 .ocx{left:50%;bottom:28px;transform:translateX(-50%);display:none;gap:6px;z-index:22}
 .ocx.on{display:flex}
 .ocdots{display:flex;gap:6px;padding:8px 12px;border-radius:999px}
@@ -531,6 +533,7 @@ html,body{overscroll-behavior:none}
 .form .stp input{width:56px;text-align:center;background:none;box-shadow:none;padding:4px 0;font:600 1.15rem var(--cond);-moz-appearance:textfield}
 .form .stp input::-webkit-inner-spin-button{-webkit-appearance:none}
 /* classes com nome */
+.recg .clc svg{width:38px;height:32px;flex:none}
 .clc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
 .clc{display:flex;align-items:center;gap:7px;border:0;border-radius:12px;padding:5px 8px 5px 5px;background:var(--chip);cursor:pointer;text-align:left;font:600 .72rem var(--sans);color:var(--ink2);opacity:.75;transition:opacity .15s,background .15s}
 .clc .cls{flex:none;transform:scale(.85)}

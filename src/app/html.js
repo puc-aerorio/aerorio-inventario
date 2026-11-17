@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { $, S, app } from './state.js';
 import { IC, P } from './icons.js';
-import { CL, etqOf, stats } from './data.js';
+import { CL, TRANSP, etqOf, stats } from './data.js';
 
 /* ================= utilidades ================= */
 export const clsH=(c,extra='')=>{const k=CL[c];return `<span class="cls ${extra}" style="--c:${k.c}" data-cl="${c}"><span class="ic"><svg viewBox="0 0 24 24">${P[k.i]}</svg></span><span class="nm">${k.n}</span></span>`;};
@@ -15,16 +15,17 @@ export const tagH=(node,ref)=>node.etq?`<span class="plabel" data-tag="${ref}">$
 export const cntH=(st,opt={})=>`<span class="cnts"><span class="cnt" title="unidades">${IC.stack}${odoH(st.u)}</span>${st.org||opt.org?`<span class="cnt" title="organizadores">${IC.box}${odoH(st.org)}</span>`:''}${st.al?`<span class="cnt w" title="alertas">${IC.alert}${odoH(st.al)}</span>`:''}</span>`;
 export const clsNH=st=>`<div class="clsrow">${Object.entries(st.cls).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<span class="clsn">${clsH(c)}<b>${n}</b></span>`).join('')}</div>`;
 export const clsIconsH=st=>Object.keys(st.cls).slice(0,5).map(c=>clsH(c,'sm')).join('');
-export function heroH(n){const st=stats(n);return `<div class="hero"><div class="big"><span class="n">${odoH(st.u)}</span><span class="c">${st.u===1?'item guardado':'itens guardados'}</span></div>${clsNH(st)}<span style="flex:1"></span><span class="cnts">${st.org?`<span class="cnt" title="organizadores">${IC.box}${odoH(st.org)}</span>`:''}${st.al?`<span class="cnt w" title="alertas">${IC.alert}${odoH(st.al)}</span>`:''}</span></div>`;}
+export function heroH(n){const st=stats(n);return `<div class="hero"><div class="big"><span class="n">${odoH(st.u)}</span><span class="c">${st.u===1?'item':'itens'}</span></div>${clsNH(st)}<span style="flex:1"></span><span class="cnts">${st.org?`<span class="cnt" title="organizadores">${IC.box}${odoH(st.org)}</span>`:''}${st.al?`<span class="cnt w" title="alertas">${IC.alert}${odoH(st.al)}</span>`:''}</span></div>`;}
 /* desenho 2D dos organizadores: pequena isometria */
 export function shade(hex,f){const c=new THREE.Color(hex);c.multiplyScalar(f);return '#'+c.getHexString();}
 /* desenhos 2D dos organizadores (isometria nos cards, frente nas pilhas) */
-export const OH={caixaTrava:15,gavetinhas:22,maleta:11,maletaT:13,cesto:10,ferramentas:16,divisorias:7,papelao:16,saco:14};
-export function orgIso(tipo,cor){const top=shade(cor,1.25),l=cor,r=shade(cor,.75);const D=12,h=OH[tipo]||14,y0=34-h;
+export const OH={caixaTrava:15,gavetinhas:22,maleta:11,maletaT:13,cesto:10,ferramentas:16,divisorias:7,papelao:16,saco:9,pote:16};
+export function orgIso(tipo,cor){if(cor===TRANSP)cor='#cfe0ea';const top=shade(cor,1.25),l=cor,r=shade(cor,.75);const D=12,h=OH[tipo]||14,y0=34-h;
  const face=(yy,hh,fl=l,fr=r,op=1)=>`<path d="M2 ${yy} L22 ${yy+D/2} L22 ${yy+D/2+hh} L2 ${yy+hh}Z" fill="${fl}" fill-opacity="${op}"/><path d="M22 ${yy+D/2} L42 ${yy} L42 ${yy+hh} L22 ${yy+D/2+hh}Z" fill="${fr}" fill-opacity="${op}"/>`;
  const topf=(yy,fill,op=1)=>`<path d="M2 ${yy} L22 ${yy-D/2} L42 ${yy} L22 ${yy+D/2}Z" fill="${fill}" fill-opacity="${op}"/>`;
  const vid='#cfe0ea',vidE='#9fb6c4';let s='';
- if(tipo==='saco')s=`<ellipse cx="22" cy="27" rx="19" ry="9" fill="${l}"/><ellipse cx="22" cy="23" rx="16" ry="7" fill="${top}"/><path d="M8 23 Q22 30 36 23" stroke="${r}" stroke-width="1.5" fill="none"/>`;
+ if(tipo==='saco'){const yb=26;s=`<path d="M2 ${yb} L22 ${yb-9} L42 ${yb} L22 ${yb+9}Z" fill="${vid}" fill-opacity=".7" stroke="${vidE}" stroke-width="1"/><ellipse cx="22" cy="${yb-2}" rx="15" ry="5.5" fill="#eef5f9" fill-opacity=".75"/><path d="M7 ${yb-3} L22 ${yb-9} L37 ${yb-3}" stroke="${cor}" stroke-width="1.8" fill="none"/><path d="M26 ${yb+3} L34 ${yb} L36 ${yb+1.5} L28 ${yb+4.5}Z" fill="#fff"/>`;}
+ else if(tipo==='pote'){const y1=y0+h;s=`<path d="M9 ${y0} L9 ${y1} A13 5.5 0 0 0 35 ${y1} L35 ${y0}Z" fill="${vid}" fill-opacity=".9" stroke="${vidE}" stroke-width="1"/><path d="M9 ${y0-3} L9 ${y0} A13 5.5 0 0 0 35 ${y0} L35 ${y0-3}Z" fill="${shade(cor,.8)}"/><ellipse cx="22" cy="${y0-3}" rx="13" ry="5.5" fill="${top}"/>`;}
  else if(tipo==='caixaTrava'||tipo==='divisorias'){s=face(y0,h,vid,vidE,.85)+topf(y0,'#e6f0f6',.9)+`<path d="M2 ${y0} L22 ${y0+D/2} L42 ${y0}" stroke="${vidE}" stroke-width="1" fill="none"/>`;
   if(tipo==='caixaTrava')s+=`<rect x="5" y="${y0+1}" width="3" height="6" rx="1" fill="${cor}"/><rect x="36" y="${y0+1}" width="3" height="6" rx="1" fill="${cor}"/>`;
   else for(let k=1;k<4;k++)s+=`<path d="M${2+k*5} ${y0+k*1.5} L${22+k*5} ${y0+k*1.5-D/2}" stroke="${cor}" stroke-width="1.4"/>`;}
@@ -35,10 +36,11 @@ export function orgIso(tipo,cor){const top=shade(cor,1.25),l=cor,r=shade(cor,.75
   if(tipo==='maleta'||tipo==='ferramentas')s+=`<path d="M17 ${y0-1} q5 -${tipo==='ferramentas'?5:7} 10 0" stroke="${shade(cor,.5)}" stroke-width="2.5" fill="none"/><path d="M2 ${y0+h*.45} L22 ${y0+h*.45+D/2} L42 ${y0+h*.45}" stroke="${shade(cor,.55)}" stroke-width="1" fill="none"/>`;
   if(tipo==='gavetinhas')for(let k=0;k<2;k++){const yy=y0+4+k*h/2.2;s+=`<path d="M5 ${yy+2} L19 ${yy+8}" stroke="${top}" stroke-width="1.4"/><rect x="9" y="${yy+3.5}" width="5" height="2.2" fill="#c8302c" transform="skewY(22)"/>`;}}
  return `<svg class="iso" viewBox="-2 0 48 38">${s}</svg>`;}
-export function orgFront(tipo,cor){const r=shade(cor,.7);const h={caixaTrava:12,gavetinhas:16,maleta:10,maletaT:11,cesto:8,ferramentas:13,divisorias:6,papelao:13,saco:10}[tipo]||10;let s='';
+export function orgFront(tipo,cor){const r=shade(cor,.7);const h={caixaTrava:12,gavetinhas:16,maleta:10,maletaT:11,cesto:8,ferramentas:13,divisorias:6,papelao:13,saco:7,pote:12}[tipo]||10;let s='';if(cor===TRANSP)cor='#cfe0ea';
  if(tipo==='caixaTrava'||tipo==='divisorias')s=`<rect x="2" y="${20-h}" width="20" height="${h}" rx="2" fill="#cfe0ea" stroke="#9fb6c4"/>`+(tipo==='caixaTrava'?`<rect x="1" y="${21-h}" width="3" height="5" fill="${cor}"/><rect x="20" y="${21-h}" width="3" height="5" fill="${cor}"/>`:`<path d="M7 ${21-h}v${h-2}M12 ${21-h}v${h-2}M17 ${21-h}v${h-2}" stroke="${cor}" stroke-width="1.2"/>`);
  else if(tipo==='maletaT')s=`<rect x="2" y="${20-h}" width="20" height="${h}" rx="2" fill="${cor}"/><rect x="2" y="${20-h}" width="20" height="3" fill="#cfe0ea"/><path d="M9 ${20-h} q3 -4 6 0" stroke="#1c1c1c" stroke-width="2" fill="none"/>`;
- else if(tipo==='saco')s=`<rect x="2" y="${20-h}" width="20" height="${h}" rx="5" fill="${cor}"/>`;
+ else if(tipo==='saco')s=`<rect x="2" y="${20-h}" width="20" height="${h}" rx="4" fill="${cor}" fill-opacity=".7" stroke="#9fb6c4"/><path d="M4 ${21-h}h16" stroke="${shade(cor,.6)}" stroke-width="1.4"/>`;
+ else if(tipo==='pote')s=`<rect x="5" y="${20-h}" width="14" height="${h}" rx="2" fill="#cfe0ea" stroke="#9fb6c4"/><rect x="4" y="${19-h}" width="16" height="3" rx="1" fill="${shade(cor,.8)}"/>`;
  else{s=`<rect x="2" y="${20-h}" width="20" height="${h}" rx="2" fill="${cor}"/>`;
   if(tipo==='maleta'||tipo==='ferramentas')s+=`<path d="M9 ${20-h} q3 -4 6 0" stroke="${r}" stroke-width="2" fill="none"/><path d="M2 ${20-h*.5}h20" stroke="${r}" stroke-width="1"/>`;
   if(tipo==='gavetinhas')s+=`<path d="M4 ${20-h*.5}h16" stroke="${r}" stroke-width="1.2"/><rect x="9" y="${20-h*.78}" width="6" height="2" fill="#c8302c"/><rect x="9" y="${20-h*.3}" width="6" height="2" fill="#c8302c"/>`;

@@ -5,7 +5,7 @@ import { LIVE } from '../config.js';
 export const CL={ferr:{n:'Ferramenta manual',i:'wrench',c:'#E07A1F',m:'unidades'},elet:{n:'Ferramenta elétrica',i:'bolt',c:'#D9A400',m:'unidades'},eletro:{n:'Eletrônica',i:'chip',c:'#1E9E6A',m:'contavel'},
  fix:{n:'Fixação',i:'screw',c:'#5B6B7F',m:'conjunto'},quim:{n:'Adesivos e químicos',i:'drop',c:'#8E5BD0',m:'contavel'},mat:{n:'Materiais',i:'layers',c:'#A0703C',m:'contavel'},
  med:{n:'Medição',i:'ruler',c:'#1585A3',m:'unidades'},epi:{n:'EPI',i:'shield',c:'#D2483F',m:'contavel'},div:{n:'Diversos',i:'dots',c:'#7A8794',m:'contavel'}};
-export const SPECK={ferr:['Marca','Medida'],elet:['Marca','Potência'],eletro:['Tipo (macho/fêmea)','Especificação'],fix:['Tipos'],quim:['Validade','Rendimento'],mat:['Dimensão','Espessura'],med:['Faixa','Resolução'],epi:['Tamanho'],div:['Especificação']};
+export const SPECK={ferr:['Marca','Medida'],elet:['Marca','Potência'],eletro:['Tipo (macho/fêmea)','Especificação'],fix:['Tipos'],quim:['Validade','Tamanho','Rendimento'],mat:['Dimensão','Espessura'],med:['Faixa','Resolução'],epi:['Tamanho'],div:['Especificação']};
 export const SUG=[[/broca|chave|lima|estilete|tesoura|alicate|martelo|serrote|grampo|esquadro/,'ferr'],[/furadeira|parafusadeira|dremel|retifica|solda|soprador|tupia|lixadeira/,'elet'],
  [/resistor|capacitor|servo|conector|placa|arduino|bateria|lipo|motor|esc|fio|cabo|led|sensor|multimetro/,'eletro'],[/parafuso|porca|arruela|rebite|abracadeira|pino/,'fix'],
  [/cola|epoxi|resina|tinta|fita|primer|solvente|thinner/,'quim'],[/balsa|carbono|madeira|espuma|tecido|fibra|chapa|tubo|compensado/,'mat'],
@@ -14,17 +14,23 @@ export const ESTADOS={boa:['Boa','#237F52'],desgastada:['Desgastada','#C98F00'],
 export const PESSOAS=['Lucas','Marina','Pedro','Ana','Cava','Júlia'];
 export const TIPOEMP={equipe:'Pessoa da equipe',externa:'Outra equipe',inst:'Instituição'};
 export const NIVEIS=['Vazio','Pouco','Médio','Cheio'];
+export const TRANSP='#cfe3ee';/* cor "transparente" dos organizadores: vale como cor comum na planilha */
 export const OT={caixaTrava:{n:'Caixa transparente com travas',h:{P:.09,M:.13,G:.19},lid:1,transp:1,cor:'#c9302c'},
- gavetinhas:{n:'Gaveteiro plástico',h:{P:.14,M:.2,G:.28},cor:'#c6cbce'},
+ gavetinhas:{n:'Gaveteiro plástico',h:{P:.26,M:.26,G:.28},sz:{P:[.17,.27],M:[.17,.27],G:[.44,.3]},tams:['M','G'],nlv:{P:3,M:3,G:2},cor:TRANSP},
  maleta:{n:'Maleta rígida',h:{P:.07,M:.09,G:.12},lid:1,cor:'#e26b1f'},
  maletaT:{n:'Maleta com tampa transparente',h:{P:.08,M:.11,G:.14},lid:1,transp:1,cor:'#d8b21f'},
  cesto:{n:'Cesto vazado',h:{P:.06,M:.09,G:.12},open:1,cor:'#f2f2ef'},
  ferramentas:{n:'Caixa de ferramentas',h:{P:.12,M:.16,G:.22},lid:1,cor:'#5f6468'},
  divisorias:{n:'Caixa com divisórias',h:{P:.04,M:.05,G:.07},lid:1,transp:1,cor:'#4f8fd0'},
  papelao:{n:'Caixa de papelão',h:{P:.1,M:.15,G:.22},open:1,cor:'#c49a62'},
- saco:{n:'Saco',h:{P:.06,M:.08,G:.1},cor:'#D2483F'}};
+ saco:{n:'Saco',h:{P:.05,M:.07,G:.09},cor:TRANSP},
+ pote:{n:'Pote com tampa',h:{P:.08,M:.11,G:.16},sz:{P:[.1,.1],M:[.14,.14],G:[.2,.2]},cor:TRANSP}};
+/* tamanho efetivo, medidas e altura de um organizador (alguns tipos só existem em M e G) */
+export const orgTam=o=>{const a=OT[o.tipo].tams;return a&&!a.includes(o.tam)?a[0]:o.tam;};
+export const tamsOf=tipo=>OT[tipo].tams||['P','M','G'];
 export const OTK=Object.keys(OT);export const SZ={P:[.17,.13],M:[.27,.19],G:[.44,.3]};
-export const OCOL=['#3E7CB1','#E0B12E','#4C9A6A','#C8553D','#8E5BD0','#5B6B7F','#E07A1F','#2b3138'];
+export const orgSz=o=>{const t=orgTam(o);return (OT[o.tipo].sz&&OT[o.tipo].sz[t])||SZ[t];};export const orgH=o=>OT[o.tipo].h[orgTam(o)];
+export const OCOL=[TRANSP,'#3E7CB1','#E0B12E','#4C9A6A','#C8553D','#8E5BD0','#5B6B7F','#E07A1F','#2b3138'];
 export const DAY=864e5,NOW=Date.now();
 export const ITEMS={
  solda:{nome:'Estação de solda',cl:'elet',desc:'Estação 60 W com controle de temperatura.',spec:{'Marca':'Hikari','Potência':'60 W'}},
@@ -132,6 +138,8 @@ export const M=[
  Pt('A',{nomeP:'Em cima'}),Pt('G1',{nomeP:'Gaveta 1'}),Pt('G2',{nomeP:'Gaveta 2'}),Pt('G3',{nomeP:'Gaveta 3'}),Pt('G4',{nomeP:'Gaveta 4'})]},
 {id:'e_azul',lab:'ele',nome:'Gaveteiro azul pequeno',cod:'43',tipo:'gavazul',movel:1,pos:[3.27,.75,1.0],rot:0,real:'#1f4c96',etq:null,partes:[
  Pt('A',{nomeP:'Em cima'}),Pt('B1',{nomeP:'Gaveta 1'}),Pt('B2',{nomeP:'Gaveta 2'}),Pt('B3',{nomeP:'Gaveta 3'}),Pt('B4',{nomeP:'Gaveta 4'})]}];
+/* armários e estantes suspensos têm o tampo livre: ganham a parte "Em cima" */
+for(const m of M)if((m.tipo==='suspenso'||m.tipo==='estSusp')&&!m.partes.some(p=>p.id==='A'))m.partes.unshift(Pt('A',{nomeP:'Em cima'}));
 /* posição de projeto de cada móvel (para o botão "Posição original" da edição) */
 for(const m of M){m.pos0=[...m.pos];m.rot0=m.rot;}
 export const SEM={id:'sem',itens:[E('dupla',{qtd:3,t:NOW-2*DAY})]};

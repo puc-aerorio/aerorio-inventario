@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { $, F, FADE, LITE, RENDER, S, UIH, WL, app, halos, mob, pick, ray, wake } from './state.js';
 import { IC, P } from './icons.js';
-import { BUY, CL, COMPRADOS, DAY, E, ESTADOS, ETQ, IT, ITEMS, LABS, LOG, M, NIVEIS, O, OCOL, OT, OTK, PESSOAS, RECADO, SEM, SPECK, SZ, TIPOEMP, U, alertsOf, allLoc, byLab, clean, countable, etqOf, findOrg, identOp, isAlert, locE, log, norm, orgName, partName, pathOf, resetDemo, save, stats, sugCl, touch, uid, unitsOf, usedEtq, walk } from './data.js';
+import { BUY, CL, COMPRADOS, DAY, E, ESTADOS, ETQ, IT, ITEMS, LABS, LOG, M, NIVEIS, O, OCOL, OT, OTK, PESSOAS, RECADO, SEM, SPECK, SZ, TIPOEMP, TRANSP, U, alertsOf, allLoc, byLab, clean, countable, etqOf, findOrg, identOp, isAlert, locE, log, norm, orgName, partName, pathOf, resetDemo, save, stats, sugCl, touch, uid, unitsOf, usedEtq, walk, orgH, orgSz, tamsOf } from './data.js';
 import { can, clsH, clsIconsH, cntH, heroH, isAdmin, odoH, odoSet, orgFront, orgIso, ostackH, qrSvg, relRect, tagH, toast } from './html.js';
 import { fly, runTweens, tween, tweens, wait } from './tween.js';
 import { DIR, camera, controls, fitD, labG, renderer, scene } from './scene.js';
@@ -84,7 +84,7 @@ export function renderCard(e){const sc=e.el.querySelector('.sb')?.scrollTop||0;l
   b+=`<div class="grp">Itens<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button> · <button class="link" data-b="addo">+ Organizador</button></span></div>`;
   b+=p.itens.length?p.itens.map(x=>itemH(x,e)).join(''):`<div style="color:var(--ink3);font-size:.85rem;padding:6px 0">${p.orgs.length?'Nenhum item fora dos organizadores.':'Nada guardado aqui ainda.'}</div>`;}
  else if(e.t==='o'){const o=e.o;b+=heroH(o);
-  b+=`<div style="display:flex;gap:8px;margin:0 0 6px" data-need="m"><button class="pill sm" data-b="moveorg">${IC.move}Mudar de lugar</button><button class="pill sm" data-b="rmorg" title="Os itens de dentro ficam soltos neste lugar">${IC.trash}Remover</button><span class="cols8" style="margin-left:auto;align-items:center">${[OT[o.tipo].cor,...OCOL.filter(c=>c!==OT[o.tipo].cor)].slice(0,6).map(c=>`<button data-ocor="${c}" class="${c===o.cor?'on':''}" style="--c:${c}" title="Trocar a cor"></button>`).join('')}</span></div>`;
+  b+=`<div style="display:flex;gap:8px;margin:0 0 6px" data-need="m"><button class="pill sm" data-b="moveorg">${IC.move}Mudar de lugar</button><button class="pill sm" data-b="rmorg" title="Os itens de dentro ficam soltos neste lugar">${IC.trash}Remover</button><span class="cols8" style="margin-left:auto;align-items:center">${[OT[o.tipo].cor,...OCOL.filter(c=>c!==OT[o.tipo].cor)].slice(0,6).map(c=>`<button data-ocor="${c}" class="${c===o.cor?'on':''}${c===TRANSP?' tr':''}" style="--c:${c}" title="${c===TRANSP?'Transparente':'Trocar a cor'}"></button>`).join('')}</span></div>`;
   b+=`<div class="grp">Dentro de ${orgName(o).toLowerCase()}<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button></span></div>`;
   b+=o.itens.length?o.itens.map(x=>itemH(x,e)).join(''):'<div style="color:var(--ink3);font-size:.85rem">Vazio.</div>';}
  else if(e.t==='i')b+=detailH(e);
@@ -95,6 +95,8 @@ export function refreshCards(){S.stack.forEach(renderCard);if(S.sel&&acard.class
 
 /* --------- linha de item --------- */
 export const piecesH=n=>{const m=12;return '<i></i>'.repeat(Math.min(n,m))+(n>m?`<em>+${n-m}</em>`:'');};
+/* resumo das especificações cadastradas (tamanho, validade…) para aparecer sob o nome */
+export const specLine=it=>Object.entries(it.spec||{}).filter(([,v])=>v&&String(v).trim()).slice(0,3).map(([k,v])=>{const kk=k.replace(/\s*\(.*\)$/,'');return `${kk} ${v}`;}).join(' · ');
 export function itemH(e,ctx,opt={}){const it=IT(e),c=CL[it.cl].c;const al=alertsOf(e);const esg=it.modo==='contavel'&&e.qtd===0;let q='',ctl='';
  if(it.modo==='contavel'){q=esg?`<div class="q" style="color:#C0392B">0<small>${it.un}</small></div>`:`<div class="q">${odoH(e.qtd)}<small>${it.un}</small></div>`;
   ctl=`<div class="pcs" style="--c:${c}">${piecesH(e.qtd)}</div><span class="rc"><button data-act="dec" aria-label="Usar uma">−</button><button data-act="inc" aria-label="Repor uma">+</button></span>`;}
@@ -106,10 +108,14 @@ export function itemH(e,ctx,opt={}){const it=IT(e),c=CL[it.cl].c;const al=alerts
    <div class="cjrow"><span class="cjl">Tipos dentro</span><div class="tps">${(e.tipos||[]).map((t,k)=>`<button class="tp ${t.aus?'aus':''}" data-act="tipo" data-k="${k}" title="${t.aus?'Está faltando · toque quando repor':'Toque para marcar que está faltando'}">${t.aus?'⚠ ':''}${t.n}</button>`).join('')}<button class="tp add" data-act="addtipo" data-need="m">+ tipo</button></div></div>`;}
  const acts=`<div class="acts">${[['det','info','Detalhes'],['edit','edit','Editar'],['mov','move','Mudar de lugar'],['rm','trash',isAdmin()?'Baixa/apagar':'Dar baixa'],['nf','nf',e.nf?'Encontrei':'Não achei']].concat(it.modo==='unidades'?[['emp','hand','Emprestar']]:[]).map(([a,i,t])=>`<button class="ibtn lb" data-a="${a}">${IC[i]}<span>${t}</span></button>`).join('')}</div>`;
  const open=S.openRow===e.id;
- return `<div class="irow ${open?'open':''} ${esg?'esg':''}" data-item="${e.id}">${clsH(it.cl,it.modo==='contavel'&&e.qtd<=it.min&&e.qtd>0?'pulse':'')}<div class="nm">${it.nome}${opt.path?`<small>${opt.path}</small>`:''}</div>${q}
+ return `<div class="irow ${open?'open':''} ${esg?'esg':''}" data-item="${e.id}">${clsH(it.cl,it.modo==='contavel'&&e.qtd<=it.min&&e.qtd>0?'pulse':'')}<div class="nm">${it.nome}${specLine(it)?`<span class="spx">${specLine(it)}</span>`:''}${opt.path?`<small>${opt.path}</small>`:''}</div>${q}
   <div class="wr">${al.map(([k,t])=>`<span class="wn ${k}">${t}</span>`).join('')}</div><div class="ctl">${ctl}</div>${acts}</div>`;}
 export const unitH=(u,it)=>{const [n,c]=ESTADOS[u.estado];const op=it&&identOp(it,u.v);
  return `<button class="uc ${u.emp?'emp':''} ${op?(op.c?'vcor':'vtxt'):''}" data-act="unit" data-u="${u.n}" style="--sc:${c}${op&&op.c?';--vc:'+op.c:''}" title="#${u.n}${op?' · '+op.n:''} · ${n}${u.emp?' · com '+u.emp.para:''}">${op&&!op.c?`<b>${op.n.slice(0,1).toUpperCase()}</b><i>${u.n}</i>`:u.n}</button>`;};
+/* recipiente de uma caixa/kit: qual organizador aparece no 3D e de que cor (compartilhado entre criar e editar) */
+export const recH=(rec,at)=>`<div class="flbl">Recipiente <span>como a caixa aparece no 3D</span></div><div class="clc-grid recg"><button class="clc ${!rec?'on':''}" data-${at}t=""><span>Padrão</span></button>${OTK.map(k=>`<button class="clc ${rec&&rec.tipo===k?'on':''}" data-${at}t="${k}">${orgFront(k,rec&&rec.tipo===k?rec.cor:OT[k].cor)}<span>${OT[k].n}</span></button>`).join('')}</div>
+ ${rec?`<div class="cols8" style="margin:6px 0 2px">${[TRANSP,...OCOL.filter(c=>c!==TRANSP),OT[rec.tipo].cor].filter((c,i,a)=>a.indexOf(c)===i).map(c=>`<button data-${at}c="${c}" class="${c===rec.cor?'on':''}${c===TRANSP?' tr':''}" style="--c:${c}" title="${c===TRANSP?'Transparente':''}"></button>`).join('')}</div>`:''}`;
+export const recSet=(rec,tipo,cor)=>{if(cor!=null)return rec?{...rec,cor}:rec;if(!tipo)return null;return {tipo,cor:rec&&rec.tipo===tipo?rec.cor:OT[tipo].cor};};
 export const vlegH=(e,it)=>it.ident?`<div class="vleg"><span>${it.ident.nome}</span>${it.ident.ops.map(o=>[o,e.units.filter(u=>u.v===o.n).length]).filter(x=>x[1]).map(([o,q])=>`<span>${o.c?`<i style="background:${o.c}"></i>`:''}${o.n} <b>${q}</b></span>`).join('')}</div>`:'';
 /* ---------- detalhes do item (card próprio) ---------- */
 export function detailH(e){const x=e.x,it=IT(x.e);const locs=allLoc().filter(y=>y.e.ref===it.id);const hist=LOG.filter(l=>l.ref===it.id);
@@ -167,7 +173,7 @@ export function specsH(cl,spec,extra){const keys=[...new Set([...(SPECK[cl]||[])
  return `<div class="flbl">Especificações <span>(opcional)</span></div>${keys.map(k=>`<label>${SPECROT[k]||k}<input data-spec="${k}" value="${spec[k]||''}" placeholder="${SPECPH[k]||''}"></label>`).join('')}
   ${extra.map((z,i)=>`<div class="row"><label>Campo<input data-sxk="${i}" value="${z[0]}" placeholder="Ex.: Cor do cabo"></label><label>Valor<input data-sxv="${i}" value="${z[1]}"></label></div>`).join('')}<button class="link" data-sxadd style="align-self:flex-start">+ outro campo</button>`;}
 export function openEdit(x,card){const it=IT(x.e);const usoDe=()=>{const u={};for(const y of allLoc())if(y.e.ref===it.id&&y.e.units)for(const z of y.e.units)if(z.v)u[z.v]=(u[z.v]||0)+1;return u;};
- const ed={nome:it.nome,cl:it.cl,un:it.un,min:it.min,desc:it.desc||'',spec:{...(it.spec||{})},extra:[],id:identDe(it),units:(x.e.units||[]).map(u=>({...u,_u:u})),qtd:x.e.qtd,nivel:x.e.nivel,tipos:(x.e.tipos||[]).map(t=>t.n).join(', '),uso:usoDe()};
+ const ed={nome:it.nome,cl:it.cl,un:it.un,min:it.min,desc:it.desc||'',spec:{...(it.spec||{})},extra:[],id:identDe(it),units:(x.e.units||[]).map(u=>({...u,_u:u})),qtd:x.e.qtd,nivel:x.e.nivel,tipos:(x.e.tipos||[]).map(t=>t.n).join(', '),rec:it.rec?{...it.rec}:null,uso:usoDe()};
  pushCard({t:'ed',f:card.f,p:card.p,o:card.o,x,ed});}
 export function editCardH(e){const x=e.x,it=IT(x.e),ed=e.ed;const nl=allLoc().filter(y=>y.e.ref===it.id).length;
  const ops=ed.id.k?ed.id.ops:[];
@@ -177,7 +183,7 @@ export function editCardH(e){const x=e.x,it=IT(x.e),ed=e.ed;const nl=allLoc().fi
   <div class="hint">Controle: <b>${{unidades:'por unidade (patrimônio)',contavel:'por quantidade (consumível)',conjunto:'caixa ou kit (nível)'}[it.modo]}</b>. Para mudar o tipo de controle, cadastre o item de novo.</div>
   ${it.modo==='contavel'?`<div class="row"><label>Unidade de medida<input data-ef="un" value="${ed.un}" placeholder="un., m, folhas, g"></label><label>Mínimo <span class="h">avisa abaixo disso</span><input data-ef="min" type="number" min="0" value="${ed.min}"></label></div>
    <label>Quantidade neste lugar<span class="stp big"><button data-efq="-1">−</button><input data-ef="qtd" type="number" min="0" value="${ed.qtd}"><button data-efq="1">+</button></span></label>`:''}
-  ${it.modo==='conjunto'?`<label>Quanto tem neste lugar<div class="gsel">${NIVEIS.map((n,k)=>`<button data-efnv="${k}" class="${k===ed.nivel?'on':''}">${n}</button>`).join('')}</div></label><label>Tipos dentro <span class="h">separe por vírgula</span><input data-ef="tipos" value="${ed.tipos}" placeholder="Ex.: M2, M3, M4"></label>`:''}
+  ${it.modo==='conjunto'?`<label>Quanto tem neste lugar<div class="gsel">${NIVEIS.map((n,k)=>`<button data-efnv="${k}" class="${k===ed.nivel?'on':''}">${n}</button>`).join('')}</div></label><label>Tipos dentro <span class="h">separe por vírgula</span><input data-ef="tipos" value="${ed.tipos}" placeholder="Ex.: M2, M3, M4"></label>${recH(ed.rec,'efr')}`:''}
   ${it.modo==='unidades'?identH(ed.id,false,ed.uso)+`<div class="flbl">Unidades neste lugar <span>${ed.units.length}</span></div>
    <div class="eunits">${ed.units.map((u,i)=>`<div class="eu"><b class="eun">#${u.n}</b>${ops.length?`<select data-euv="${i}" aria-label="${ed.id.k==='cor'?'Cor':'Opção'}"><option value="">—</option>${ops.map(o=>`<option ${o.n===u.v||o.o===u.v?'selected':''} value="${o.o||o.n}">${o.n}</option>`).join('')}</select>`:''}<select data-eue="${i}" aria-label="Estado">${Object.entries(ESTADOS).map(([k,[n]])=>`<option value="${k}" ${k===u.estado?'selected':''}>${n}</option>`).join('')}</select><span class="eue">${u.emp?`com ${u.emp.para}`:''}</span><button class="idx" data-eux="${i}" title="Dar baixa nesta unidade">×</button></div>`).join('')||'<div class="hint">Nenhuma unidade aqui.</div>'}</div>
    <button class="link" data-euadd style="align-self:flex-start">+ unidade</button>`:''}
@@ -193,6 +199,7 @@ export function editClick(e,t){const ed=e.ed;if(!t.closest('input,textarea,selec
  if(identClick(ed.id,t,false))re=true;
  const cl=t.closest('[data-efcl]');if(cl){ed.cl=cl.dataset.efcl;re=true;}
  const q=t.closest('[data-efq]');if(q){ed.qtd=Math.max(0,ed.qtd+(+q.dataset.efq));re=true;}
+ const rt=t.closest('[data-efrt]');if(rt){ed.rec=recSet(ed.rec,rt.dataset.efrt);re=true;}const rc=t.closest('[data-efrc]');if(rc){ed.rec=recSet(ed.rec,null,rc.dataset.efrc);re=true;}
  const nv=t.closest('[data-efnv]');if(nv){ed.nivel=+nv.dataset.efnv;re=true;}
  if(t.closest('[data-sxadd]')){ed.extra.push(['','']);re=true;}
  const ux=t.closest('[data-eux]');if(ux){ed.units.splice(+ux.dataset.eux,1);re=true;}
@@ -202,7 +209,7 @@ export function editClick(e,t){const ed=e.ed;if(!t.closest('input,textarea,selec
 export function editSave(e){editSync(e);const ed=e.ed,x=e.x,it=IT(x.e);const nome=clean(ed.nome);if(!nome){toast('O item precisa de um nome',null,1800);return true;}
  const mud=[];if(nome!==it.nome)mud.push('nome');it.nome=nome;if(ed.cl!==it.cl)mud.push('classe');it.cl=ed.cl;it.desc=clean(ed.desc);
  if(it.modo==='contavel'){it.un=clean(ed.un)||'un.';it.min=ed.min;if(x.e.qtd!==ed.qtd){mud.push(`quantidade ${x.e.qtd} → ${ed.qtd}`);x.e.qtd=ed.qtd;}}
- if(it.modo==='conjunto'){if(x.e.nivel!==ed.nivel)mud.push(NIVEIS[ed.nivel].toLowerCase());x.e.nivel=ed.nivel;const ant=new Map((x.e.tipos||[]).map(t=>[norm(t.n),t]));x.e.tipos=ed.tipos.split(',').map(z=>clean(z)).filter(Boolean).map(n=>ant.get(norm(n))||{n});}
+ if(it.modo==='conjunto'){if(x.e.nivel!==ed.nivel)mud.push(NIVEIS[ed.nivel].toLowerCase());x.e.nivel=ed.nivel;const ant=new Map((x.e.tipos||[]).map(t=>[norm(t.n),t]));x.e.tipos=ed.tipos.split(',').map(z=>clean(z)).filter(Boolean).map(n=>ant.get(norm(n))||{n});if(ed.rec)it.rec={...ed.rec};else delete it.rec;}
  const spec={};for(const [k,v] of Object.entries(ed.spec))if(clean(v))spec[k]=clean(v);for(const [k,v] of ed.extra)if(clean(k)&&clean(v))spec[clean(k)]=clean(v);it.spec=spec;
  if(it.modo==='unidades'){const novo=identFinal(ed.id);const ren={};for(const o of ed.id.ops)if(o.o&&o.o!==o.n)ren[o.o]=o.n;
   for(const y of allLoc())if(y.e.ref===it.id&&y.e.units&&y.e!==x.e)for(const u of y.e.units)if(u.v&&ren[u.v])u.v=ren[u.v];
@@ -429,7 +436,7 @@ $('#scrim').onclick=()=>{if(modalEl.classList.contains('on')){/* formulários s�
 
 /* ================= criar item ================= */
 export function openItemCreator(opt={}){
- const st={nome:opt.nome||'',cl:sugCl(opt.nome||''),manual:false,modo:null,q:1,un:'un.',min:0,nivel:2,tipos:'',desc:'',spec:{},extra:[],id:{k:'',nome:'',ops:[],novo:''},more:false};
+ const st={nome:opt.nome||'',cl:sugCl(opt.nome||''),manual:false,modo:null,q:1,un:'un.',min:0,nivel:2,tipos:'',desc:'',spec:{},extra:[],id:{k:'',nome:'',ops:[],novo:''},more:false,rec:null};
  const modoDe=()=>st.modo||CL[st.cl||'div'].m;
  const total=()=>modoDe()==='unidades'&&st.id.k&&st.id.ops.length?st.id.ops.reduce((a,o)=>a+(o.q||0),0):st.q;
  const render=()=>{const cl=st.cl||'div';const modo=modoDe();const d=opt.dest;const tot=total();const okU=modo!=='unidades'||tot>0;
@@ -438,7 +445,7 @@ export function openItemCreator(opt={}){
    <div class="flbl">Classe <span>${st.cl&&!st.manual&&st.nome?'sugerida pelo nome · toque para trocar':'toque para escolher'}</span></div>
    <div class="clc-grid">${Object.entries(CL).map(([k,v])=>`<button class="clc ${k===st.cl?'on':''}" data-ccl="${k}">${clsH(k)}<span>${v.n}</span></button>`).join('')}</div>
    <div class="flbl">Como controlar</div><div class="gsel wrap">${[['unidades','Por unidade','cada uma tem número (ferramentas, instrumentos)'],['contavel','Por quantidade','conta quanto tem (consumíveis)'],['conjunto','Caixa ou kit','só o nível: vazio a cheio']].map(([k,v,h])=>`<button data-cm="${k}" class="${k===modo?'on':''}"><b>${v}</b><small>${h}</small></button>`).join('')}</div>
-   ${modo==='conjunto'?`<label>Quanto tem<div class="gsel">${NIVEIS.map((n,k)=>`<button data-cnv="${k}" class="${k===st.nivel?'on':''}">${n}</button>`).join('')}</div></label><label>Tipos dentro <span class="h">opcional · separe por vírgula</span><input id="ctp" value="${st.tipos}" placeholder="Ex.: M2, M3, M4"></label>`
+   ${modo==='conjunto'?`<label>Quanto tem<div class="gsel">${NIVEIS.map((n,k)=>`<button data-cnv="${k}" class="${k===st.nivel?'on':''}">${n}</button>`).join('')}</div></label><label>Tipos dentro <span class="h">opcional · separe por vírgula</span><input id="ctp" value="${st.tipos}" placeholder="Ex.: M2, M3, M4"></label>${recH(st.rec,'cr')}`
    :modo==='contavel'?`<div class="row"><label>Quantidade<span class="stp big"><button data-cq="-">−</button><input id="cq" type="number" min="0" value="${st.q}"><button data-cq="+">+</button></span></label><label>Unidade de medida<input id="cu" value="${st.un}" placeholder="un., m, folhas"></label><label>Mínimo <span class="h">avisa abaixo</span><input id="cmn" type="number" min="0" value="${st.min}"></label></div>`
    :`${st.id.k&&st.id.ops.length?'':`<label>Quantas unidades<span class="stp big"><button data-cq="-">−</button><input id="cq" type="number" min="1" value="${st.q}"><button data-cq="+">+</button></span></label>`}${identH(st.id,true)}`}
    <button class="link cmore" data-cmore>${st.more?'− Esconder especificações e descrição':'+ Especificações e descrição (opcional)'}</button>
@@ -459,7 +466,7 @@ export function openItemCreator(opt={}){
   if(!t.closest('input,textarea,select'))sync();
   if(identClick(st.id,t,true)){if(st.id.k&&st.id.ops.length===0&&st.q>0&&t.closest('[data-idk]')){}return render();}
   const c=t.closest('[data-ccl]');if(c){st.cl=c.dataset.ccl;st.manual=true;st.modo=null;return render();}
-  const cm=t.closest('[data-cm]');if(cm){st.modo=cm.dataset.cm;if(st.modo!=='unidades')st.id={k:'',nome:'',ops:[],novo:''};return render();}const cv=t.closest('[data-cnv]');if(cv){st.nivel=+cv.dataset.cnv;return render();}
+  const cm=t.closest('[data-cm]');if(cm){st.modo=cm.dataset.cm;if(st.modo!=='unidades')st.id={k:'',nome:'',ops:[],novo:''};return render();}const rt=t.closest('[data-crt]');if(rt){st.rec=recSet(st.rec,rt.dataset.crt);return render();}const rc=t.closest('[data-crc]');if(rc){st.rec=recSet(st.rec,null,rc.dataset.crc);return render();}const cv=t.closest('[data-cnv]');if(cv){st.nivel=+cv.dataset.cnv;return render();}
   if(t.closest('[data-cmore]')){st.more=!st.more;return render();}
   if(t.closest('[data-sxadd]')){st.extra.push(['','']);return render();}
   const cq=t.closest('[data-cq]');if(cq){st.q=Math.max(modoDe()==='unidades'?1:0,st.q+(cq.dataset.cq==='+'?1:-1));return render();}
@@ -472,7 +479,7 @@ export function openItemCreator(opt={}){
   const ja=Object.values(ITEMS).find(i=>norm(i.nome)===norm(st.nome)&&i.modo===modo);const id=ja?ja.id:'I'+uid();
   if(ja&&ja.ident&&ident&&norm(ja.ident.nome)!==norm(ident.nome)){modalEl.querySelector('#cerr').textContent=`${ja.nome} já é diferenciado por ${ja.ident.nome.toLowerCase()}. Use o mesmo critério ou dê outro nome ao item.`;return;}
   if(ja){if(ident){ja.ident=ja.ident||{nome:ident.nome,tipo:ident.tipo,ops:[]};for(const o of ident.ops)if(!identOp(ja,o.n))ja.ident.ops.push(o);}}
-  else ITEMS[id]={id,nome:st.nome,cl,modo,un:st.un||'un.',min:st.min,desc:st.desc,spec,obs:'',...(ident?{ident}:{})};
+  else ITEMS[id]={id,nome:st.nome,cl,modo,un:st.un||'un.',min:st.min,desc:st.desc,spec,obs:'',...(ident?{ident}:{}),...(modo==='conjunto'&&st.rec?{rec:{...st.rec}}:{})};
   const n0=ja&&modo==='unidades'?Math.max(0,...allLoc().filter(y=>y.e.ref===id&&y.e.units).flatMap(y=>y.e.units.map(u=>u.n))):0;
   const e=E(id,{t:Date.now()});if(modo==='unidades')e.units=uv?uv.map((v,k)=>U(n0+k+1,'boa',null,v)):Array.from({length:st.q},(_,k)=>U(n0+k+1));else if(modo==='contavel')e.qtd=st.q;else{e.nivel=st.nivel;e.tipos=st.tipos.split(',').map(z=>clean(z)).filter(Boolean).map(n=>({n}));}
   if(ja&&!(opt.dest&&((opt.dest.o||opt.dest.p).itens||[]).some(z=>z.ref===id)))toast(`<b>${st.nome}</b> já estava cadastrado. Entrou como mais um lugar do mesmo item.`,null,3600);
@@ -488,17 +495,17 @@ export function openItemCreator(opt={}){
 export const ocEl=$('#oc'),ocx=$('#ocx');export let show=null;
 export function openOrgCreator(opt={}){if(!can())return;closeStack(true);deselect();S.oc={ti:0,cor:OT[OTK[0]].cor,corManual:false,tam:'M',nome:'',etq:null,dest:opt.dest||null,destM:opt.destM||null,slide:0};
  show=new THREE.Group();scene.add(show);buildShow(0);renderOC();ocEl.classList.add('on');ocx.classList.add('on');home();}
-export function ocData(i){const s=S.oc;const tp=OTK[(i+OTK.length)%OTK.length];return {id:'show'+i,tipo:tp,cor:(tp===OTK[s.ti]||s.corManual)?s.cor:OT[tp].cor,tam:s.tam,itens:[]};}
+export function ocData(i){const s=S.oc;const tp=OTK[(i+OTK.length)%OTK.length];return {id:'show'+i,tipo:tp,cor:(tp===OTK[s.ti]||s.corManual)?s.cor:OT[tp].cor,tam:tamsOf(tp).includes(s.tam)?s.tam:'M',itens:[]};}
 export function buildShow(dir){const s=S.oc;for(const c of [...show.children]){show.remove(c);c.traverse(x=>{if(x.isMesh)x.geometry.dispose();});}
- for(const k of [-1,0,1]){const o=ocData(s.ti+k);o._sz=SZ[o.tam];const holder=new THREE.Group();show.add(holder);const g=buildOrg(o,holder);const H=OT[o.tipo].h[o.tam];g.position.y=-H/2;
+ for(const k of [-1,0,1]){const o=ocData(s.ti+k);o._sz=orgSz(o);const holder=new THREE.Group();show.add(holder);const g=buildOrg(o,holder);const H=orgH(o);g.position.y=-H/2;
   holder.userData={k,g};applyStyleTo(holder);
   if(k){holder.traverse(x=>{if(x.isMesh){x.material=x.material.clone();x.material.transparent=true;x.material.opacity=.3;x.castShadow=false;}});}}
  s.slide=dir;if(dir)tween({ms:420,ease:'out',key:'oslide',update:p=>{s.slide=dir*(1-p);}});}
 export function renderOC(){const s=S.oc;const t=OT[OTK[s.ti]];const node={etq:s.etq};
  ocEl.innerHTML=`<h4>Novo organizador</h4><div style="color:var(--ink2);font-size:.82rem">${s.dest?`Vai direto para <b>${s.dest.f.d.nome} › ${partName(s.dest.f.d,s.dest.p)}</b>.`:'Depois você escolhe onde guardar.'}</div>
  <div class="tsel"><button class="ibtn" data-o="prev">${IC.back}</button><div class="tn"><b>${t.n}</b><small>${OTK.indexOf(OTK[s.ti])+1} de ${OTK.length}</small></div><button class="ibtn" data-o="next">${IC.next}</button></div>
- <div class="form" style="padding-top:0"><label>Cor<div class="cols8">${[OT[OTK[s.ti]].cor,...OCOL.filter(c=>c!==OT[OTK[s.ti]].cor)].slice(0,8).map(c=>`<button data-oc="${c}" class="${c===s.cor?'on':''}" style="--c:${c}"></button>`).join('')}</div></label>
- <label>Tamanho<div class="gsel">${['P','M','G'].map(z=>`<button data-oz="${z}" class="${z===s.tam?'on':''}">${{P:'Pequeno',M:'Médio',G:'Grande'}[z]}</button>`).join('')}</div></label>
+ <div class="form" style="padding-top:0"><label>Cor<div class="cols8">${[OT[OTK[s.ti]].cor,...OCOL.filter(c=>c!==OT[OTK[s.ti]].cor)].slice(0,8).map(c=>`<button data-oc="${c}" class="${c===s.cor?'on':''}${c===TRANSP?' tr':''}" style="--c:${c}" title="${c===TRANSP?'Transparente':''}"></button>`).join('')}</div></label>
+ <label>Tamanho<div class="gsel">${tamsOf(OTK[s.ti]).map(z=>`<button data-oz="${z}" class="${z===s.tam?'on':''}">${{P:'Pequeno',M:'Médio',G:'Grande'}[z]}</button>`).join('')}</div></label>
  <label>Nome (opcional)<input id="on" value="${s.nome}" placeholder="${t.n} — ex.: Bandeja de corte"></label>
  <label>Etiqueta (opcional)<div>${tagH(node,'oc')}</div></label></div>
  <div class="mf"><button class="pill" data-o="cancel">Cancelar</button><button class="pill pri" data-o="ok">${s.dest?IC.in+'Criar e guardar aqui':IC.loc+'Criar e escolher lugar'}</button></div>`;
@@ -506,7 +513,7 @@ export function renderOC(){const s=S.oc;const t=OT[OTK[s.ti]];const node={etq:s.
  const on=ocEl.querySelector('#on');on.oninput=()=>s.nome=on.value;}
 ocEl.addEventListener('click',ev=>{const s=S.oc;if(!s)return;const t=ev.target;const tag=t.closest('[data-tag]');if(tag)return tagPop(tag);
  const b=t.closest('[data-o]');if(b){const a=b.dataset.o;if(a==='prev'||a==='next'){s.ti=(s.ti+(a==='next'?1:-1)+OTK.length)%OTK.length;if(!s.corManual)s.cor=OT[OTK[s.ti]].cor;buildShow(a==='next'?1:-1);renderOC();return;}
-  if(a==='cancel')return closeOC();if(a==='ok'){const o=O(OTK[s.ti],s.cor,s.tam,{nome:clean(s.nome),etq:s.etq});log(`Organizador criado: ${orgName(o)}`);const from=relRect(ocEl);const d=s.dest,dm=s.destM;closeOC(true);
+  if(a==='cancel')return closeOC();if(a==='ok'){const o=O(OTK[s.ti],s.cor,tamsOf(OTK[s.ti]).includes(s.tam)?s.tam:'M',{nome:clean(s.nome),etq:s.etq});log(`Organizador criado: ${orgName(o)}`);const from=relRect(ocEl);const d=s.dest,dm=s.destM;closeOC(true);
    if(d)return insertDirect({kind:'neworg',o},{f:d.f,p:d.p,o:null},from);return startCarry({kind:'neworg',o,destM:dm});}}
  const c=t.closest('[data-oc]');if(c){s.cor=c.dataset.oc;s.corManual=c.dataset.oc!==OT[OTK[s.ti]].cor;buildShow(0);renderOC();return;}const z=t.closest('[data-oz]');if(z){s.tam=z.dataset.oz;buildShow(0);renderOC();}});
 export function closeOC(keep){S.oc=null;ocEl.classList.remove('on');ocx.classList.remove('on');if(show){scene.remove(show);show=null;}home();if(!keep)goHome();}
@@ -522,7 +529,7 @@ export function carryLabel(c){if(c.kind==='org'||c.kind==='neworg'){const o=c.ki
  const e=c.kind==='new'?c.e:c.x.e;return `${clsH(IT(e).cl,'sm')}${IT(e).nome}${c.kind==='unit'?' · '+c.u.n:''}`;}
 export function startCarry(c){if(!can())return;closePalette(true);closeStack(true);deselect();closePop();c.stage='part';S.carry=c;
  c.ghost=new THREE.Group();scene.add(c.ghost);
- if(c.kind==='org'||c.kind==='neworg'){const o=c.kind==='org'?c.x.o:c.o;const g=buildOrg({...o,id:'ghost',_sz:SZ[o.tam]},c.ghost);applyStyleTo(c.ghost);}
+ if(c.kind==='org'||c.kind==='neworg'){const o=c.kind==='org'?c.x.o:c.o;const g=buildOrg({...o,id:'ghost',_sz:orgSz(o)},c.ghost);applyStyleTo(c.ghost);}
  else piece(c.ghost,c.kind==='new'?c.e:c.x.e,.16);c.ghost.visible=false;
  if(c.destM){focusF(c.destM);}else if(!S.lab&&c.x&&c.x.m)focusLab(c.x.m.lab);else if(S.lab)focusLab(S.lab);/* afasta do close do card: dá para ver os outros móveis */
  showGuide();home();refreshCards();}
