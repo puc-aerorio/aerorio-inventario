@@ -32,7 +32,9 @@ export function openStack(entries){entries=entries.filter((e,i)=>!(e.t==='m'&&ar
  [...stackEl.querySelectorAll('.scard')].forEach(c=>c.remove());S.stack=[];entries.forEach((e,i)=>pushCard(e,i<entries.length-1));home();}
 export function pushCard(e,silent){wake();if(e.t==='m'&&areaUnica(e.f))e={t:'p',f:e.f,p:e.f.d.partes[0]};S.stack.push(e);UIH.sheetFor&&UIH.sheetFor(e.t);wake();const el=document.createElement('div');el.className='scard glass'+(silent?'':' enter');stackEl.appendChild(el);e.el=el;
  renderCard(e);layoutStack();if(!silent)requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('enter')));if(!silent||S.stack.length)onTop();}
-export function popTo(i){wake();while(S.stack.length-1>i){const e=S.stack.pop();e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);}layoutStack();onTop();}
+export function popTo(i){wake();const saiu=new Set();while(S.stack.length-1>i){const e=S.stack.pop();e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);if(e.f)saiu.add(e.f);}
+ const topo=S.stack[S.stack.length-1];for(const f of saiu)if(!topo||topo.f!==f)setOpen(f,null);/* gaveta ou porta de outro móvel não fica aberta depois de fechar o card dele */
+ layoutStack();onTop();}
 export function closeStack(quiet){wake();S.stack.forEach(e=>{e.el.classList.add('leave');const el=e.el;setTimeout(()=>el.remove(),320);if(e.t==='o')orgOpen(e.f,e.p.id,e.o.id,0);});const f=S.stack[0]&&S.stack[0].f;S.stack=[];if(f)setOpen(f,null);
  setHoverPart(null);deselect();home();if(!quiet)goHome();}
 export function layoutStack(){const n=S.stack.length;S.stack.forEach((e,i)=>{const depth=n-1-i;e.el.style.top=(i*50)+'px';e.el.style.zIndex=i;e.el.style.transform=depth?`scale(${1-depth*.025})`:'';e.el.classList.toggle('under',!!depth);});}
@@ -79,10 +81,13 @@ export function silhH(f){const d=f.d,ps=visParts(f,!!S.carry);const g=id=>d.part
 export function renderCard(e){const sc=e.el.querySelector('.sb')?.scrollTop||0;let b='';
  if(e.t==='m'){b+=heroH(e.f.d)+encaixeH(e.f)+silhH(e.f)+filhosH(e.f,null);}
  else if(e.t==='p'){const p=e.p;b+=heroH(p)+filhosH(e.f,p.id);
-  b+=`<div style="display:flex;gap:6px;align-items:center;margin:0 0 4px"><button class="chipbtn ${p.cheia?'red':''}" data-b="cheia" data-need="m">${p.cheia?'Cheia · sem espaço':'Tem espaço'}</button><span class="hint" data-need="m">${p.cheia?'Toque quando liberar espaço':'Toque para marcar como cheia'}</span></div>`;
+  const lixo=e.f.d.deco==='lixo',area=areaUnica(e.f);
+  if(!lixo)b+=`<div style="display:flex;gap:6px;align-items:center;margin:0 0 4px"><button class="chipbtn ${p.cheia?'red':''}" data-b="cheia" data-need="m">${p.cheia?'Cheia · sem espaço':'Tem espaço'}</button><span class="hint" data-need="m">${p.cheia?'Toque quando liberar espaço':'Toque para marcar como cheia'}</span></div>`;
+  if(lixo)b+=`<div class="hint" style="margin:0 0 6px">O que for deixado aqui vai ser descartado. Use <b>Esvaziar lixo</b> para dar baixa em tudo de uma vez.</div>`;
   if(p.orgs.length){b+=`<div class="grp">Organizadores</div>`+p.orgs.map(o=>orgRowH(o)).join('');}
-  b+=`<div class="grp">Itens<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button> · <button class="link" data-b="addo">+ Organizador</button></span></div>`;
-  b+=p.itens.length?p.itens.map(x=>itemH(x,e)).join(''):`<div style="color:var(--ink3);font-size:.85rem;padding:6px 0">${p.orgs.length?'Nenhum item fora dos organizadores.':'Nada guardado aqui ainda.'}</div>`;}
+  b+=`<div class="grp">${lixo?'Para descartar':'Itens'}<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button>${lixo?'':` · <button class="link" data-b="addo">+ Organizador</button>`}</span></div>`;
+  b+=p.itens.length?p.itens.map(x=>itemH(x,e)).join(''):`<div style="color:var(--ink3);font-size:.85rem;padding:6px 0">${p.orgs.length?'Nenhum item fora dos organizadores.':lixo?'Nada para descartar.':area?'Nada neste lugar ainda.':'Nada guardado aqui ainda.'}</div>`;
+  if(lixo&&p.itens.length)b+=`<div class="mf in" data-need="m" style="justify-content:flex-start;margin:6px 0 0"><button class="pill sm danger" data-b="esvaziar">${IC.trash}Esvaziar lixo</button></div>`;}
  else if(e.t==='o'){const o=e.o;b+=heroH(o);
   b+=`<div style="display:flex;gap:8px;margin:0 0 6px" data-need="m"><button class="pill sm" data-b="moveorg">${IC.move}Mudar de lugar</button><button class="pill sm" data-b="rmorg" title="Os itens de dentro ficam soltos neste lugar">${IC.trash}Remover</button><span class="cols8" style="margin-left:auto;align-items:center">${[OT[o.tipo].cor,...OCOL.filter(c=>c!==OT[o.tipo].cor)].slice(0,6).map(c=>`<button data-ocor="${c}" class="${c===o.cor?'on':''}${c===TRANSP?' tr':''}" style="--c:${c}" title="${c===TRANSP?'Transparente':'Trocar a cor'}"></button>`).join('')}</span></div>`;
   b+=`<div class="grp">Dentro de ${orgName(o).toLowerCase()}<span class="x" data-need="m"><button class="link" data-b="addi">+ Item</button></span></div>`;
@@ -181,7 +186,7 @@ export function editCardH(e){const x=e.x,it=IT(x.e),ed=e.ed;const nl=allLoc().fi
   <label>Nome<input data-ef="nome" value="${ed.nome}"></label>
   <div class="flbl">Classe</div><div class="clc-grid">${Object.entries(CL).map(([k,v])=>`<button class="clc ${k===ed.cl?'on':''}" data-efcl="${k}">${clsH(k)}<span>${v.n}</span></button>`).join('')}</div>
   <div class="hint">Controle: <b>${{unidades:'por unidade (patrimônio)',contavel:'por quantidade (consumível)',conjunto:'caixa ou kit (nível)'}[it.modo]}</b>. Para mudar o tipo de controle, cadastre o item de novo.</div>
-  ${it.modo==='contavel'?`<div class="row"><label>Unidade de medida<input data-ef="un" value="${ed.un}" placeholder="un., m, folhas, g"></label><label>Mínimo <span class="h">avisa abaixo disso</span><input data-ef="min" type="number" min="0" value="${ed.min}"></label></div>
+  ${it.modo==='contavel'?`<div class="row"><label>Unidade de medida<input data-ef="un" value="${ed.un}" placeholder="un., m, folhas, g"></label><label>Mínimo <span class="h">avisa abaixo disso</span><input data-ef="min" type="number" min="0" step="1" value="${ed.min}"></label></div>
    <label>Quantidade neste lugar<span class="stp big"><button data-efq="-1">−</button><input data-ef="qtd" type="number" min="0" value="${ed.qtd}"><button data-efq="1">+</button></span></label>`:''}
   ${it.modo==='conjunto'?`<label>Quanto tem neste lugar<div class="gsel">${NIVEIS.map((n,k)=>`<button data-efnv="${k}" class="${k===ed.nivel?'on':''}">${n}</button>`).join('')}</div></label><label>Tipos dentro <span class="h">separe por vírgula</span><input data-ef="tipos" value="${ed.tipos}" placeholder="Ex.: M2, M3, M4"></label>${recH(ed.rec,'efr')}`:''}
   ${it.modo==='unidades'?identH(ed.id,false,ed.uso)+`<div class="flbl">Unidades neste lugar <span>${ed.units.length}</span></div>
@@ -191,7 +196,7 @@ export function editCardH(e){const x=e.x,it=IT(x.e),ed=e.ed;const nl=allLoc().fi
   <label>Descrição<textarea data-ef="desc" rows="2" placeholder="Para que serve, cuidados, de quem é…">${ed.desc}</textarea></label></div>
   <div class="mf stick"><button class="pill" data-b="back">Cancelar</button><button class="pill pri" data-efsave>Salvar alterações</button></div>`;}
 export function editSync(e){const ed=e.ed,r=e.el;const g=k=>r.querySelector(`[data-ef="${k}"]`);
- if(g('nome'))ed.nome=g('nome').value;if(g('un'))ed.un=g('un').value;if(g('min'))ed.min=Math.max(0,+g('min').value||0);if(g('qtd'))ed.qtd=Math.max(0,Math.round(+g('qtd').value||0));if(g('desc'))ed.desc=g('desc').value;if(g('tipos'))ed.tipos=g('tipos').value;
+ if(g('nome'))ed.nome=g('nome').value;if(g('un'))ed.un=g('un').value;if(g('min'))ed.min=Math.max(0,Math.round(+g('min').value||0));if(g('qtd'))ed.qtd=Math.max(0,Math.round(+g('qtd').value||0));if(g('desc'))ed.desc=g('desc').value;if(g('tipos'))ed.tipos=g('tipos').value;
  r.querySelectorAll('[data-spec]').forEach(i=>ed.spec[i.dataset.spec]=i.value);r.querySelectorAll('[data-sxk]').forEach(i=>ed.extra[+i.dataset.sxk][0]=i.value);r.querySelectorAll('[data-sxv]').forEach(i=>ed.extra[+i.dataset.sxv][1]=i.value);
  r.querySelectorAll('[data-euv]').forEach(i=>{const u=ed.units[+i.dataset.euv];const o=ed.id.ops.find(o=>(o.o||o.n)===i.value);u.v=o?(o.o||o.n):null;});r.querySelectorAll('[data-eue]').forEach(i=>ed.units[+i.dataset.eue].estado=i.value);
  identSync(ed.id,r);}
@@ -244,6 +249,8 @@ export function handleCard(ev,e){const t=ev.target;if(e.t==='ed'&&!t.closest('[d
   if(a==='cheia'){e.p.cheia=!e.p.cheia;log(`${partName(e.f.d,e.p)} (${e.f.d.nome}) marcada como ${e.p.cheia?'cheia':'com espaço'}`);renderCard(e);return;}
   if(a==='ren')return renameInline(e);
   if(a==='editar'&&e.t==='i'){if(!can())return;return openEdit(e.x,e);}
+  if(a==='esvaziar'){if(!can())return;const p=e.p,lista=p.itens.slice();if(!lista.length)return;modal(`<h4>Esvaziar o lixo?</h4><div style="font-size:.9rem;color:var(--ink2)">Dá baixa em ${lista.length} ${lista.length===1?'item':'itens'}: ${lista.slice(0,6).map(x=>IT(x).nome).join(', ')}${lista.length>6?'…':''}. Fica registrado no histórico e dá para desfazer logo em seguida.</div><div class="mf"><button class="pill" data-mclose>Cancelar</button><button class="pill danger" data-eok>${IC.trash}Dar baixa em tudo</button></div>`);
+   modalEl.onclick=ev=>{const t=ev.target;if(t.closest('[data-mclose]'))return closeModal();if(t.closest('[data-eok]')){closeModal();p.itens.length=0;for(const x of lista)log(`${IT(x).nome}: baixa (descartado no lixo)`,IT(x).id);refreshCards();buildContents(e.f,p.id);toast(`Lixo esvaziado: ${lista.length} ${lista.length===1?'item':'itens'}`,()=>{p.itens.push(...lista);refreshCards();buildContents(e.f,p.id);});}};return;}
   if(a==='addi')return openItemCreator({dest:{f:e.f,p:e.p,o:e.t==='o'?e.o:null}});
   if(a==='addo')return openOrgCreator({dest:{f:e.f,p:e.p}});
   if(a==='moveorg')return startCarry({kind:'org',x:{m:e.f.d,p:e.p,o:e.o}});
@@ -392,7 +399,7 @@ export const crH=(x,k)=>`<div class="cr" data-gk="${k}" data-e="${x.e.id}">${cls
 export function renderPal(){const mode=S.pal.mode;
  if(mode==='buscar')return renderBusca();
  const dest=S.pal.dest;const loans=loansAll();const all=allLoc();
- const title=mode==='aqui'?`<div class="ph" style="padding:0 2px">${IC.in}Guardar em ${dest.o?orgName(dest.o):dest.p?partName(dest.f.d,dest.p):dest.f.d.nome}</div>`:'';
+ const title=mode==='aqui'?`<div class="ph" style="padding:0 2px">${IC.in}Guardar em ${dest.o?orgName(dest.o):dest.p?partName(dest.f.d,dest.p):dest.f.d.nome}</div>`:`<div class="ph" style="padding:0 2px">${IC.in}Guardar, devolver e cadastrar</div>`;
  let r1=`<div class="r1">${tilesH(mode==='aqui')}<div class="dev"><div class="ph">${IC.hand}Devolver · ${loans.length}<span style="margin-left:auto;text-transform:none;letter-spacing:0;font:500 .72rem var(--sans)">mais antigos primeiro</span></div><div class="lst">${loans.length?loans.map(({x,u},k)=>{const d=Math.round((Date.now()-u.emp.desde)/DAY);
   return `<div class="dr">${clsH(IT(x.e).cl,'sm')}<div><div class="t">${IT(x.e).nome} · ${u.n}</div><div class="p">com ${u.emp.para} · ${d?`há ${d} dia${d>1?'s':''}`:'hoje'}</div></div><button class="pill sm ${d>30?'pri':''}" data-dev="${k}">Devolver</button></div>`;}).join(''):'<div class="colm"><div class="empty">Nada emprestado.</div></div>'}</div></div></div>`;
  const s=norm(gq.trim());let r2;
@@ -446,7 +453,7 @@ export function openItemCreator(opt={}){
    <div class="clc-grid">${Object.entries(CL).map(([k,v])=>`<button class="clc ${k===st.cl?'on':''}" data-ccl="${k}">${clsH(k)}<span>${v.n}</span></button>`).join('')}</div>
    <div class="flbl">Como controlar</div><div class="gsel wrap">${[['unidades','Por unidade','cada uma tem número (ferramentas, instrumentos)'],['contavel','Por quantidade','conta quanto tem (consumíveis)'],['conjunto','Caixa ou kit','só o nível: vazio a cheio']].map(([k,v,h])=>`<button data-cm="${k}" class="${k===modo?'on':''}"><b>${v}</b><small>${h}</small></button>`).join('')}</div>
    ${modo==='conjunto'?`<label>Quanto tem<div class="gsel">${NIVEIS.map((n,k)=>`<button data-cnv="${k}" class="${k===st.nivel?'on':''}">${n}</button>`).join('')}</div></label><label>Tipos dentro <span class="h">opcional · separe por vírgula</span><input id="ctp" value="${st.tipos}" placeholder="Ex.: M2, M3, M4"></label>${recH(st.rec,'cr')}`
-   :modo==='contavel'?`<div class="row"><label>Quantidade<span class="stp big"><button data-cq="-">−</button><input id="cq" type="number" min="0" value="${st.q}"><button data-cq="+">+</button></span></label><label>Unidade de medida<input id="cu" value="${st.un}" placeholder="un., m, folhas"></label><label>Mínimo <span class="h">avisa abaixo</span><input id="cmn" type="number" min="0" value="${st.min}"></label></div>`
+   :modo==='contavel'?`<div class="row"><label>Quantidade<span class="stp big"><button data-cq="-">−</button><input id="cq" type="number" min="0" value="${st.q}"><button data-cq="+">+</button></span></label><label>Unidade de medida<input id="cu" value="${st.un}" placeholder="un., m, folhas"></label><label>Mínimo <span class="h">avisa abaixo</span><input id="cmn" type="number" min="0" step="1" value="${st.min}"></label></div>`
    :`${st.id.k&&st.id.ops.length?'':`<label>Quantas unidades<span class="stp big"><button data-cq="-">−</button><input id="cq" type="number" min="1" value="${st.q}"><button data-cq="+">+</button></span></label>`}${identH(st.id,true)}`}
    <button class="link cmore" data-cmore>${st.more?'− Esconder especificações e descrição':'+ Especificações e descrição (opcional)'}</button>
    ${st.more?`${specsH(cl,st.spec,st.extra)}<label>Descrição<textarea id="cd" rows="2" placeholder="Para que serve, cuidados, de quem é…">${st.desc}</textarea></label>`:''}
@@ -456,7 +463,7 @@ export function openItemCreator(opt={}){
   const cn=modalEl.querySelector('#cn');if(!st._foco){st._foco=1;cn.focus();cn.setSelectionRange(99,99);}
   cn.oninput=()=>{const ex=v=>!!(v.trim()&&Object.values(ITEMS).some(i=>norm(i.nome)===norm(v)));const mudouEx=ex(st.nome)!==ex(cn.value);st.nome=cn.value;if(mudouEx&&st.manual){sync();render();const c2=modalEl.querySelector('#cn');c2.focus();c2.setSelectionRange(99,99);return;}if(!st.manual||mudouEx){const s_=st.manual?st.cl:sugCl(cn.value);if(s_!==st.cl||mudouEx){sync();if(s_!==st.cl){st.cl=s_;st.modo=null;}render();const c2=modalEl.querySelector('#cn');c2.focus();c2.setSelectionRange(99,99);}}};
   const cq=modalEl.querySelector('#cq');if(cq)cq.oninput=()=>{st.q=Math.max(modoDe()==='unidades'?1:0,Math.round(+cq.value||0));};};
- const sync=()=>{const g=id=>modalEl.querySelector(id);if(g('#cn'))st.nome=g('#cn').value;if(g('#cu'))st.un=g('#cu').value;if(g('#cmn'))st.min=Math.max(0,+g('#cmn').value||0);if(g('#cd'))st.desc=g('#cd').value;if(g('#ctp'))st.tipos=g('#ctp').value;if(g('#cq'))st.q=Math.max(modoDe()==='unidades'?1:0,Math.round(+g('#cq').value||0));
+ const sync=()=>{const g=id=>modalEl.querySelector(id);if(g('#cn'))st.nome=g('#cn').value;if(g('#cu'))st.un=g('#cu').value;if(g('#cmn'))st.min=Math.max(0,Math.round(+g('#cmn').value||0));if(g('#cd'))st.desc=g('#cd').value;if(g('#ctp'))st.tipos=g('#ctp').value;if(g('#cq'))st.q=Math.max(modoDe()==='unidades'?1:0,Math.round(+g('#cq').value||0));
   modalEl.querySelectorAll('[data-spec]').forEach(i=>st.spec[i.dataset.spec]=i.value);modalEl.querySelectorAll('[data-sxk]').forEach(i=>st.extra[+i.dataset.sxk][0]=i.value);modalEl.querySelectorAll('[data-sxv]').forEach(i=>st.extra[+i.dataset.sxv][1]=i.value);identSync(st.id,modalEl);};
  render();
  modalEl.onkeydown=ev=>{if(ev.key==='Enter'&&ev.target.matches('[data-idf=novo]')){ev.preventDefault();sync();if(identAdd(st.id,true))render();const n=modalEl.querySelector('[data-idf=novo]');n&&n.focus();}};
@@ -687,10 +694,14 @@ export function soltaArrasto(d){const f=d.f;f.d.pos=[f.g.position.x,f.g.position
  const h=f.host;log(h?`${f.d.nome}: agora ${ondeTxt(h).toLowerCase()} ${h.f.d.nome}`:`${f.d.nome}: posição alterada`);
  if(S.mv)$('#mvTxt').innerHTML=mvTxt(f);refreshCards();}
 const mvTxt=f=>`Movendo <b>${f.d.nome}</b>${f.host?` · ${ondeTxt(f.host).toLowerCase()} ${f.host.f.d.nome}`:''}`;
-export function startMove(f){closeStack(true);focusLab(f.d.lab);S.mv=f;S.sel=f;app.dataset.mv='1';$('#mvTxt').innerHTML=mvTxt(f);home();
+let mvSnap=null;
+export function startMove(f){closeStack(true);mvSnap=[f,...descendentes(f)].map(x=>({f:x,p:x.g.position.clone(),r:x.g.rotation.y}));focusLab(f.d.lab);S.mv=f;S.sel=f;app.dataset.mv='1';$('#mvTxt').innerHTML=mvTxt(f);home();
  toast(classeMovel(f.d)==='topo'?'Arraste o gaveteiro: ele fica em cima dos tampos e encaixa no centro.':'Arraste o gaveteiro: perto de uma bancada ele encaixa embaixo do lado curto.',null,3200);wake(800);}
 export function endMove(){if(!S.mv)return;const f=S.mv;S.mv=null;S.sel=null;app.dataset.mv='0';home();openStack([{t:'m',f}]);}
 $('#mvDone').onclick=endMove;
+/* cancelar: o móvel (e o que está encaixado nele) volta para onde estava quando o modo mover começou */
+$('#mvCancel').onclick=()=>{if(!S.mv||!mvSnap)return;const f=S.mv,snap=mvSnap;let mexeu=false;for(const z of snap){if(z.f.g.position.distanceTo(z.p)>.001||Math.abs(z.f.g.rotation.y-z.r)>.001)mexeu=true;z.f.g.position.copy(z.p);z.f.g.rotation.y=z.r;z.f.d.pos=[z.p.x,z.p.y,z.p.z];z.f.d.rot=z.r;measure(z.f);}
+ relaciona();if(mexeu)log(`${f.d.nome}: movimento cancelado, voltou ao lugar`);endMove();if(mexeu)toast(`<b>${f.d.nome}</b> voltou ao lugar de antes`,null,2200);};
 /* edição do Admin: leva o móvel (e o que está encaixado nele) para o outro laboratório, no lugar livre mais perto do centro de lá */
 $('#labBtn').onclick=()=>{const f=S.sel;if(!f)return toast('Selecione um móvel primeiro',null,1800);const de=f.d.lab,para=de==='man'?'ele':'man',L=LABS.find(l=>l.id===para);
  const kids=descendentes(f).map(k=>({f:k,p0:k.g.position.clone(),r0:k.g.rotation.y}));const d={antes:new Set(),kids};const cl=classeMovel(f.d)==='topo'?null:classeMovel(f.d);
